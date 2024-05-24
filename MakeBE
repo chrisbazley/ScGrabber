@@ -1,0 +1,35 @@
+# Project:   SGmodule
+
+
+# Toolflags:
+CCflags = -c -depend !Depend -IC: -throwback  -DNDEBUG  -zM -fahif -zps1 -Ospace  -apcs 3/32/fpe2/swst/fp/nofpr -memaccess -L22-S22-L41
+#CCflags = -c -depend !Depend -IC: -throwback -DFORTIFY -DDEBUG_OUTPUT -zM -fahi -apcs 3/32/fpe2/swst/fp/nofpr
+C++flags = -c -depend !Depend -IC: -throwback
+Linkflags = -rmf -c++ -o $@ 
+ObjAsmflags = -throwback -NoCache -depend !Depend
+CMHGflags = -d @.h.ScrGrabberHdr -depend !Depend -throwback -IC: -32bit 
+LibFileflags = -c -o $@
+Squeezeflags = -o $@
+ASMflags = -processor ARM2 -throwback -apcs 32 
+
+
+# Final targets:
+@.ScrGrabber:   CBLib:oz.CBLib @.o.ScrGrabberHdr @.o.ScrGrabber C:o.stubsG @.o.errors 
+        Link $(Linkflags) CBLib:oz.CBLib @.o.ScrGrabberHdr @.o.ScrGrabber C:o.stubsG \
+        @.o.errors 
+
+
+# User-editable dependencies:
+@.h.ScrGrabberHdr:   @.cmhg.ScrGrabberHdr
+        cmhg @.cmhg.ScrGrabberHdr -d @.h.ScrGrabberHdr
+
+# Static dependencies:
+@.o.ScrGrabberHdr:   @.cmhg.ScrGrabberHdr
+        cmhg @.cmhg.ScrGrabberHdr -o @.o.ScrGrabberHdr
+@.o.ScrGrabber:   @.c.ScrGrabber
+        cc $(ccflags) -o @.o.ScrGrabber @.c.ScrGrabber 
+@.o.errors:   @.a.errors
+        ASM $(ASMFlags) -output @.o.errors @.a.errors
+
+
+# Dynamic dependencies:

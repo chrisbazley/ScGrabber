@@ -1,0 +1,92 @@
+
+; ScreenGrabber (CMHG module description)
+; Copyright (C) 2000  Chris Bazley
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 2 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program; if not, write to the Free Software
+; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+initialisation-code: screengrabber_initialise
+finalisation-code: screengrabber_finalise
+
+title-string: ScreenGrabber
+help-string: ScreenGrabber 2.18 © Christopher Bazley
+
+command-keyword-table: cmd_handler
+SGrab(min-args:0,
+      max-args:1,
+      add-syntax:,
+      help-text: "*SGrab saves the current screen display as a Sprite file. If no file path is supplied then the default will be used.\n",
+      invalid-syntax: "Syntax: *SGrab [<filename>]"
+     ),
+
+SGrabHotKey(min-args:0,
+            max-args:1,
+            add-syntax:,
+            help-text: "*SGrabHotKey allows the key that triggers screen shots to be enabled, disabled, reassigned, or shows the current setting if no argument is passed. You can specify a key by name or internal code (see manual for a list of recognised names).\n",
+            invalid-syntax: "Syntax: *SGrabHotKey [On|Off|<key name>|!<key code>]"
+           ),
+
+SGrabPalette(min-args:0,
+             max-args:1,
+             add-syntax:,
+             help-text: "*SGrabPalette controls whether the current palette is saved with screen shots, or shows the current setting if no argument is passed.\n",
+             invalid-syntax: "Syntax: *SGrabPalette [On|Off]"
+            ),
+
+SGrabResetCount(min-args:0,
+                max-args:0,
+                add-syntax:,
+                help-text: "*SGrabResetCount resets the counter that is used as a file name postfix when saving screen shots.\n",
+                invalid-syntax: "Syntax: *SGrabResetCount"
+               ),
+
+SGrabFilename(min-args:0,
+              max-args:1,
+              add-syntax:,
+              help-text: "*SGrabFilename sets the base file path (without postfix) to which screen shots should be saved, or shows the current path if no argument is passed.\n",
+              invalid-syntax: "Syntax: *SGrabFilename [<filename>]"
+             ),
+
+SGrabFilm(min-args:0,
+          max-args:1,
+          add-syntax:,
+          help-text: "*SGrabFilm controls whether the default action is to continue recording when the hot key is released, or shows the current setting if no argument is passed.\n"
+          invalid-syntax: "Syntax: *SGrabFilm [On|Off]"
+         ),
+
+SGrabFilmDelay(min-args:0,
+               max-args:1,
+               add-syntax:,
+               help-text: "*SGrabFilmDelay controls the interval (in centiseconds) between recording each screen shot. 'Auto' will take a screen shot whenever a different bank is displayed, whereas 'Half' records every other frame. If no argument is passed then the current setting is shown.\n"
+               invalid-syntax: "Syntax: *SGrabFilmDelay [<centiseconds>|Auto|Half]"
+              ),
+
+SGrabStatus(min-args:0,
+            max-args:0,
+            add-syntax:,
+            help-text: "*SGrabStatus displays the current status of the ScreenGrabber module.\n",
+            invalid-syntax: "Syntax: *SGrabStatus"
+           ),
+
+SGrabConfigure(min-args:0,
+               max-args:10,
+               add-syntax:,
+               help-text: "*SGrabConfigure configures the ScreenGrabber module. Any options not specified will be left in their current state.\n",
+               invalid-syntax: "Syntax: *SGrabConfigure [-On|-Off] [-Single|-Film] [-KeyName <key name>|-KeyCode <key code>] [-Interval <centiseconds>|-AutoSync|-HalfSync] [-[No]Palette] [-NewSprite|-OldSprite] [-Filename <filename>]"
+              )
+
+event-handler: event_veneer/event_handler 11
+generic-veneers: callback_veneer/callback_handler, ticker_veneer/ticker_handler
+
+service-call-handler: svc_handler 0x46
