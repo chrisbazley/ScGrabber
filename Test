@@ -1,0 +1,202 @@
+Echo Compare output with a previous test
+RMReinit ScreenGrabber
+Help ScreenGrabber
+SGrabStatus
+SGrab
+SGrabStatus
+SGrab foo
+SGrabStatus
+SGrab foo bar
+SGrabStatus
+SGrabHotKey off
+SGrabStatus
+SGrabHotKey ON
+SGrabStatus
+SGrabHotKey Off!
+SGrabStatus
+SGrabHotKey bar
+SGrabStatus
+SGrabHotKey Off
+SGrabHotKey b
+SGrabStatus
+SGrabHotKey !b
+SGrabStatus
+SGrabHotKey !&13
+SGrabStatus
+SGrabHotKey !(13+3)
+SGrabStatus
+SGrabHotKey !
+SGrabStatus
+SGrabHotKey
+SGrabStatus
+SGrabHotKey a b
+SGrabStatus
+SGrabPalette
+SGrabStatus
+SGrabPalette Off
+SGrabStatus
+SGrabPalette On
+SGrabStatus
+SGrabPalette off1
+SGrabStatus
+SGrabPalette on off
+SGrabStatus
+SGrabResetCount 3
+SGrabStatus
+SGrabResetCount
+SGrabStatus
+SGrabFilename
+SGrabStatus
+SGrabFilename qwertyuiopasdfghjklzxcvbnm1234567890
+SGrabStatus
+SGrabFilename foo bar
+SGrabStatus
+SGrabFilm
+SGrabStatus
+SGrabFilm Off
+SGrabStatus
+SGrabFilm On
+SGrabStatus
+SGrabFilm off1
+SGrabStatus
+SGrabFilm on off
+SGrabStatus
+SGrabFilmDelay
+SGrabStatus
+SGrabFilmDelay 2
+SGrabStatus
+SGrabFilmDelay 1
+SGrabStatus
+SGrabFilmDelay (-1)
+SGrabStatus
+SGrabFilmDelay aUto
+SGrabStatus
+SGrabFilmDelay haLF
+SGrabStatus
+SGrabFilmDelay aUto haLF
+SGrabStatus
+SGrabStatus foo
+SGrabConfigure -Off
+SGrabStatus
+SGrabConfigure -ON
+SGrabStatus
+SGrabConfigure -OFF
+SGrabStatus
+SGrabConfigure -o
+SGrabStatus
+SGrabConfigure -Off -On
+SGrabStatus
+SGrabConfigure -Off 5
+SGrabStatus
+SGrabConfigure -On 5
+SGrabStatus
+SGrabConfigure -Single
+SGrabStatus
+SGrabConfigure -FILM
+SGrabStatus
+SGrabConfigure -S
+SGrabStatus
+SGrabConfigure -F
+SGrabStatus
+SGrabConfigure -Single -Film
+SGrabStatus
+SGrabConfigure -Single 5
+SGrabStatus
+SGrabConfigure -Film 5
+SGrabStatus
+SGrabConfigure -KeyName
+SGrabStatus
+SGrabConfigure -KeyCode
+SGrabStatus
+SGrabConfigure -KeyName -KeyCode
+SGrabStatus
+SGrabConfigure -KeyName 5
+SGrabStatus
+SGrabConfigure -KN 6
+SGrabStatus
+SGrabConfigure -KeyCode 7
+SGrabStatus
+SGrabConfigure -KC 10
+SGrabStatus
+SGrabConfigure -KeyName 8 -KeyCode 9
+SGrabStatus
+SGrabConfigure -KeyName foo
+SGrabStatus
+SGrabConfigure -KeyCode b
+SGrabStatus
+SGrabConfigure -KeyName !23
+SGrabStatus
+SGrabConfigure -KeyCode !24
+SGrabStatus
+SGrabConfigure -Interval
+SGrabStatus
+SGrabConfigure -Interval 60
+SGrabStatus
+SGrabConfigure -I 20
+SGrabStatus
+SGrabConfigure -Interval 1+2+3
+SGrabStatus
+SGrabConfigure -Interval foo
+SGrabStatus
+SGrabConfigure -Interval 1
+SGrabStatus
+SGrabConfigure -Interval (-1)
+SGrabStatus
+SGrabConfigure -Interval 30 -as
+SGrabStatus
+SGrabConfigure -HalfSync -Interval 30
+SGrabStatus
+SGrabConfigure -AutoSync -hs
+SGrabStatus
+SGrabConfigure -HalfSync -AutoSync -Interval 30
+SGrabStatus
+SGrabConfigure -AutoSync 2
+SGrabStatus
+SGrabConfigure -HalfSync 3
+SGrabStatus
+SGrabConfigure -AUTOSYNC
+SGrabStatus
+SGrabConfigure -HalfSYNC
+SGrabStatus
+SGrabConfigure -As
+SGrabStatus
+SGrabConfigure -hS
+SGrabStatus
+SGrabConfigure -NOPalette
+SGrabStatus
+SGrabConfigure -PalETTE
+SGrabStatus
+SGrabConfigure -np
+SGrabStatus
+SGrabConfigure -P
+SGrabStatus
+SGrabConfigure -NoPalette 4
+SGrabStatus
+SGrabConfigure -Palette 6
+SGrabStatus
+SGrabConfigure -NoPalette -p
+SGrabStatus
+SGrabConfigure -NewSprite
+SGrabStatus
+SGrabConfigure -OldSprite
+SGrabStatus
+SGrabConfigure -ns
+SGrabStatus
+SGrabConfigure -oS
+SGrabStatus
+SGrabConfigure -NewSprite 4
+SGrabStatus
+SGrabConfigure -OldSprite 6
+SGrabStatus
+SGrabConfigure -ns -OldSprite
+SGrabStatus
+SGrabConfigure -filename
+SGrabStatus
+SGrabConfigure -filename zxcvbnmasdfghjklqwertyuiop123ertyu
+SGrabStatus
+SGrabConfigure -f zxcv
+SGrabStatus
+SGrabConfigure -Interval 4 -OldSprite -Single -Off -NoPalette -Filename ZX81 -KeyName E
+SGrabStatus
+SGrabConfigure -o -F -KN F -I 8 -P -NS -Filename ZX80
+SGrabStatus
