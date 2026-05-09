@@ -33,7 +33,8 @@
                 called shade_setup_window() only if write_setup_window() failed!
 */
 
-/* ANSI headers */
+/* ISO C library headers */
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -164,7 +165,7 @@ static bool may_kill_shared_module(const char *find_name)
   regs.r[0] = 0;
   do
   {
-    regs.r[1] = (int)&buffer;
+    regs.r[1] = (intptr_t)&buffer;
     regs.r[2] = sizeof(buffer);
     e = _kernel_swi(TaskManager_EnumerateTasks, &regs, &regs);
     if (e == NULL)
