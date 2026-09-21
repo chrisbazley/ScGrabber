@@ -18,6 +18,7 @@
  */
 
 /* 04.09.09 CJB Moved this code to a separate source file of its own.
+   21.09.26 CJB Use CBOSLib to create the choices directory.
 */
 
 /* ANSI headers */
@@ -45,6 +46,9 @@
 #include "gadgetutil.h"
 #include "pathtail.h"
 #include "strextra.h"
+
+/* CBOSLib headers */
+#include "OSFile.h"
 
 /* Local headers */
 #include "FEutils.h"
@@ -724,12 +728,9 @@ static int actionbutton_event(int event_code, ToolboxEvent *event, IdBlock *id_b
         {
           /* Ensure that our application's sub-directory exists in the
              global choices location */
-          _kernel_osfile_block inout;
-          inout.start = 0; /* default number of entries */
-          if (_kernel_osfile(8, "<Choices$Write>.ScGrabber", &inout) ==
-              _kernel_ERROR)
-            e = _kernel_last_oserror();
-          else
+          e = os_file_create_dir("<Choices$Write>.ScGrabber",
+                                 OS_File_CreateDir_DefaultNoOfEntries);
+          if (e == NULL)
             e = save_config("<Choices$Write>.ScGrabber.Choices");
         }
       }
