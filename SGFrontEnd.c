@@ -32,6 +32,7 @@
    23.06.06 CJB Fixed bugs where opensetup_event() and actionbutton_event()
                 called shade_setup_window() only if write_setup_window() failed!
    21.09.26 CJB Ensure only void * is converted to intptr_t.
+                Use taskmanager_enumerate_tasks instead of _kernel_swi.
 */
 
 /* ISO C library headers */
@@ -61,6 +62,7 @@
 #include "StrExtra.h"
 #include "FileUtils.h"
 #include "Debug.h"
+#include "TaskMan.h"
 
 /* Local headers */
 #include "FEutils.h"
@@ -115,15 +117,6 @@ enum
   OSModule_Delete        = 4
 };
 
-typedef struct
-{
-  int task_handle;
-  char *task_name;
-  int slot_size;
-  int flags;
-}
-TaskInfo; /* for use with TaskManager_EnumerateTasks */
-
 static ObjectId save_id; /* IDs of interesting Toolbox objects */
 
 /* --------------- Setup window and interface to module ----------------- */
@@ -156,22 +149,19 @@ static void fortify_output(const char *text)
 /* Check if two tasks of given name are running */
 static bool may_kill_shared_module(const char *find_name)
 {
-  _kernel_swi_regs regs;
-  TaskInfo buffer;
+  intptr_t context = 0;
+  TaskManagerTaskInfo buffer;
   int num_found = 0;
   _kernel_oserror *e = NULL;
 
   assert(find_name != NULL);
 
-  regs.r[0] = 0;
   do
   {
-    regs.r[1] = (intptr_t)(void *)&buffer;
-    regs.r[2] = sizeof(buffer);
-    e = _kernel_swi(TaskManager_EnumerateTasks, &regs, &regs);
+    e = taskmanager_enumerate_tasks(&context, &buffer);
     if (e == NULL)
     {
-      if (regs.r[0] >= 0 && string_equals(buffer.task_name, find_name))
+      if (context >= 0 && string_equals(buffer.task_name, find_name))
         num_found++;
     }
     else
@@ -179,7 +169,7 @@ static bool may_kill_shared_module(const char *find_name)
       num_found = INT_MAX;  /* don't kill module */
     }
   }
-  while (regs.r[0] >= 0 && num_found < 2);
+  while (context >= 0 && num_found < 2);
 
   ON_ERR_RPT(e);
   return num_found < 2; /* may only kill module if no other instances of the
