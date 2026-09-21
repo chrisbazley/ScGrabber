@@ -275,8 +275,6 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
   SaveAsSaveToFileEvent *sastfe = (SaveAsSaveToFileEvent *) event;
   FILE *f; /* output file handle */
   int chars_out; /* no. of characters transmitted by fprintf() */
-  int req;
-  char *cmd_buffer;
   const _kernel_oserror *e = NULL;
 
   NOT_USED(event_code);
@@ -286,10 +284,10 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
 
   /* Find buffer size required for the configuration command
      (an extra byte will be required for the nul terminator) */
-  req = make_config_cmd(NULL, 0) + 1;
+  int req = make_config_cmd(NULL, 0) + 1;
 
   /* Allocate a buffer for the configuration command */
-  cmd_buffer = malloc(req);
+  char *cmd_buffer = malloc(req);
   if (cmd_buffer == NULL)
   {
     e = msgs_error(DUMMY_ERRNO, "NoMem");

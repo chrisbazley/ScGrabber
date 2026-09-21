@@ -179,7 +179,7 @@ void setup_created(ObjectId id)
   e = open_key_msgs();
   if (e == NULL)
   {
-    unsigned int k, l;
+    unsigned int k;
     char *available = NULL;
     size_t av_len = 0, av_size = 0;
 
@@ -188,12 +188,10 @@ void setup_created(ObjectId id)
 
     /* Populate a string set with the key names and record the key number
        corresponding to each member of the string set. */
-    l = 0;
+    unsigned int l = 0;
     for (k = 0; k < ARRAY_SIZE(stringset_mapping); k++)
     {
       const char *key_name;
-      size_t new_size;
-      int len;
       static const char *esc_seq[] = {"\\,","\\\\"}; /* multi-character escape sequences */
 
       e = lookup_key_name(k, &key_name);
@@ -208,17 +206,16 @@ void setup_created(ObjectId id)
         continue;
 
       /* Find the buffer size required to inflate the key name string */
-      len = strinflate(NULL, 0, key_name, ",\\", esc_seq);
+      int len = strinflate(NULL, 0, key_name, ",\\", esc_seq);
       DEBUGF("String will be inflated from %d to %d bytes\n", strlen(key_name), len);
 
       /* Check that there is enough space in the string buffer for the
          key name and a trailing comma */
-      new_size = av_len + len + 1;
+      size_t new_size = av_len + len + 1;
       DEBUGF("Required buffer length will be %d bytes\n", new_size);
       if (new_size > av_size)
       {
         /* Extend the string buffer to accommodate more key names */
-        char *new_av;
 
         if (av_size == 0)
           av_size = InitialBufferSize;
@@ -227,7 +224,7 @@ void setup_created(ObjectId id)
           av_size *= BufferGrowthMultiplier; /* geometric growth */
 
         DEBUGF("About to extend string buffer to %u bytes\n", av_size);
-        new_av = realloc(available, av_size);
+        char *new_av = realloc(available, av_size);
         if (new_av == NULL)
         {
           EF(msgs_error(DUMMY_ERRNO, "NoMem"));
@@ -286,18 +283,16 @@ const _kernel_oserror *show_setup(void)
 const _kernel_oserror *configure_module(void)
 {
   const _kernel_oserror *e = NULL;
-  char *cmd_buffer;
-  int req;
 
   DEBUGF("Configuring back-end\n");
 
   /* Find string buffer size required for the configuration command
      (an extra byte will be required for the nul terminator) */
-  req = make_config_cmd(NULL, 0) + 1;
+  int req = make_config_cmd(NULL, 0) + 1;
   DEBUGF("%u bytes required for star command\n", req);
 
   /* Allocate a string buffer of appropriate size */
-  cmd_buffer = malloc(req);
+  char *cmd_buffer = malloc(req);
   if (cmd_buffer == NULL)
   {
     e = msgs_error(DUMMY_ERRNO, "NoMem");
@@ -398,9 +393,8 @@ static const _kernel_oserror *setup_set_faded(bool use_interval)
 static const _kernel_oserror *setup_set_name(unsigned int key_code)
 {
   const char *key_name;
-  const _kernel_oserror *e;
 
-  e = lookup_key_name(key_code, &key_name);
+  const _kernel_oserror *e = lookup_key_name(key_code, &key_name);
   if (e != NULL && e->errnum == ErrNum_MessageNotFound)
   {
     DEBUGF("Suppressing error '%s'\n", e->errmess);
@@ -456,10 +450,9 @@ static const _kernel_oserror *get_file_path(char **new_fname)
   if (e == NULL)
   {
     /* Allocate a string buffer of appropriate size */
-    char *fname;
 
     DEBUGF("%u bytes required for displayed base file path\n", new_fname_len);
-    fname = malloc(new_fname_len);
+    char *fname = malloc(new_fname_len);
     if (fname == NULL)
     {
       e = msgs_error(DUMMY_ERRNO, "NoMem");

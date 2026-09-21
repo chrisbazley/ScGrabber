@@ -509,10 +509,9 @@ static const _kernel_oserror *read_mode_vars(void)
     (VDUVar)ModeVar_YWindLimit,
     VDUVar_EndOfList
   };
-  const _kernel_oserror *e;
 
   /* Read information about the current screen mode */
-  e = os_read_vdu_variables(variable_nos, mode_vars);
+  const _kernel_oserror *e = os_read_vdu_variables(variable_nos, mode_vars);
   mode_vars_valid = (e == NULL);
 
   return e;
@@ -835,9 +834,8 @@ static const _kernel_oserror *take_numbered_shot(void)
 {
   /* construct file path */
   const _kernel_oserror *e = NULL;
-  char *full_path;
 
-  full_path = malloc(strlen(file_path) + NumSuffixLen + 1);
+  char *full_path = malloc(strlen(file_path) + NumSuffixLen + 1);
   if (full_path == NULL)
   {
     e = no_mem_error();
@@ -1749,14 +1747,13 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
             /* Try to match the command parameter with the name of a state */
             for ( j = 0; !found && e == NULL && sw->states[j].index != Arg_END; j++ )
             {
-              int index;
 
               if ( sw->states[j].string == NULL ||
                    stricmp( read_args_buf[0], sw->states[j].string ) != 0 )
                 continue;
 
               /* Translate state name into equivalent SGrabConfigure argument index */
-              index = sw->states[j].index;
+              int index = sw->states[j].index;
               e = sw->handler( read_args_buf[0], index );
               found = true;
             }
