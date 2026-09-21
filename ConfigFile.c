@@ -109,13 +109,12 @@ config_map[] =
 const _kernel_oserror *save_config(const char *dest_file)
 {
   const _kernel_oserror *e = NULL;
-  FILE *f; /* output file handle */
 
   assert(dest_file != NULL);
 
   _kernel_last_oserror(); /* clear any previous OS error */
 
-  f = fopen(dest_file, "w"); /* open text file for writing */
+  FILE *f = fopen(dest_file, "w"); /* open text file for writing */
   if (f == NULL)
   {
     e = _kernel_last_oserror();
@@ -192,7 +191,6 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
   bool mistake = false;
   const _kernel_oserror *e = NULL;
   unsigned int i;
-  char *colon;
 
   assert(line != NULL);
   assert(source_file != NULL);
@@ -201,7 +199,7 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
   repeat_type_str = NULL;
 
   /* Find the end of the variable name */
-  colon = strchr(line, ':');
+  char *colon = strchr(line, ':');
   if (colon == NULL)
   {
     DEBUGF("No colon in input line '%s'\n", line);
@@ -210,14 +208,13 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
   else
   {
     /* Calculate the length of the prefix in the input line */
-    unsigned int name_len;
-    const char *value, *end;
+    const char *end;
 
     assert(colon > line);
-    name_len = colon - line;
+    unsigned int name_len = colon - line;
     DEBUGF("Length of input line prefix is %d\n", name_len);
 
-    value = colon + 1;
+    const char *value = colon + 1;
     DEBUGF("Value to assign is '%s'\n", value);
 
     /* Compare the prefix with each known variable name in turn */
@@ -355,13 +352,12 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
 const _kernel_oserror *load_config(const char *source_file)
 {
   const _kernel_oserror *e = NULL;
-  FILE *f; /* input file handle */
 
   assert(source_file != NULL);
 
   _kernel_last_oserror(); /* clear any previous OS error */
 
-  f = fopen(source_file, "r"); /* open text file for reading */
+  FILE *f = fopen(source_file, "r"); /* open text file for reading */
   if (f == NULL)
   {
     e = _kernel_last_oserror();
@@ -375,11 +371,10 @@ const _kernel_oserror *load_config(const char *source_file)
 
     for (line = 1; e == NULL; line++)
     {
-      char *got;
       int c;
 
       /* Read as much of the next line as will fit in our string buffer */
-      got = fgets(read_line, sizeof(read_line), f);
+      char *got = fgets(read_line, sizeof(read_line), f);
       if (got == NULL)
       {
         /* Read error or end-of-file */

@@ -106,11 +106,10 @@ bool file_exists(const char *file_path)
 {
   /* Read catalogue info for object without path */
   _kernel_osfile_block params;
-  int object_type;
 
   assert(file_path != NULL);
 
-  object_type = _kernel_osfile(OSFile_ReadCatInfoNoPath, file_path, &params);
+  int object_type = _kernel_osfile(OSFile_ReadCatInfoNoPath, file_path, &params);
   if (object_type == _kernel_ERROR)
     return false; /* if error then assume object doesn't exist */
   else
