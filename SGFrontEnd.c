@@ -31,6 +31,7 @@
                 Made most of the functions in this source file 'static'.
    23.06.06 CJB Fixed bugs where opensetup_event() and actionbutton_event()
                 called shade_setup_window() only if write_setup_window() failed!
+   21.09.26 CJB Ensure only void * is converted to intptr_t.
 */
 
 /* ISO C library headers */
@@ -165,7 +166,7 @@ static bool may_kill_shared_module(const char *find_name)
   regs.r[0] = 0;
   do
   {
-    regs.r[1] = (intptr_t)&buffer;
+    regs.r[1] = (intptr_t)(void *)&buffer;
     regs.r[2] = sizeof(buffer);
     e = _kernel_swi(TaskManager_EnumerateTasks, &regs, &regs);
     if (e == NULL)
