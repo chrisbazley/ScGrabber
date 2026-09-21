@@ -25,6 +25,7 @@
    22.06.06 CJB Imported functions file_exists() and read_line_comm() from
                 SFeditor.
    03.09.09 CJB Moved read_line_comm() function to a new source file.
+   21.09.26 CJB Use CBOSLib to read catalogue information.
 */
 
 /* ANSI headers */
@@ -44,6 +45,9 @@
 #include "msgtrans.h"
 #include "WimpExtra.h"
 
+/* CBOSLib headers */
+#include "OSFile.h"
+
 /* Local headers */
 #include "FEutils.h"
 #include "SGFrontEnd.h"
@@ -52,9 +56,8 @@
 enum
 {
   ContinueButton           = 3,
-  MinExtErrorWimpVersion   = 321, /* Earliest version of window manager to
+  MinExtErrorWimpVersion   = 321 /* Earliest version of window manager to
                                      support Wimp_ReportError extensions */
-  OSFile_ReadCatInfoNoPath = 17   /* _kernel_osfile reason code */
 };
 
 bool dialogue_confirm(const char *mess)
@@ -105,13 +108,12 @@ bool string_equals(const char *string1, const char *string2)
 bool file_exists(const char *file_path)
 {
   /* Read catalogue info for object without path */
-  _kernel_osfile_block params;
+  OS_File_CatalogueInfo catalogue_info;
 
   assert(file_path != NULL);
 
-  int object_type = _kernel_osfile(OSFile_ReadCatInfoNoPath, file_path, &params);
-  if (object_type == _kernel_ERROR)
+  if (os_file_read_cat_no_path(file_path, &catalogue_info) != NULL)
     return false; /* if error then assume object doesn't exist */
   else
-    return (object_type != 0); /* exists unless 'object not found' */
+    return (catalogue_info.object_type != ObjectType_NotFound);
 }

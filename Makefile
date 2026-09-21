@@ -14,11 +14,11 @@ ASMflags =
 
 
 # Final targets:
-@.!RunImage:   C:o.StubsG C:o.wimplib C:o.eventlib C:stubsg_o.CBLib \
+@.!RunImage:   C:o.StubsG C:o.wimplib C:o.eventlib C:stubsg_o.CBLib C:o.CBOSLib \
         C:o.toolboxlib @.o.SGFrontEnd @.o.MakeConfig @.o.FEutils @.o.KeyNames \
         @.o.ConfigFile @.o.SetupDbox C:stubsg_o.ErrNotRec 
         Link $(Linkflags) C:o.StubsG C:o.wimplib C:o.eventlib \
-        C:stubsg_o.CBLib C:o.toolboxlib @.o.SGFrontEnd @.o.MakeConfig @.o.FEutils \
+        C:stubsg_o.CBLib C:o.CBOSLib C:o.toolboxlib @.o.SGFrontEnd @.o.MakeConfig @.o.FEutils \
         @.o.KeyNames @.o.ConfigFile @.o.SetupDbox C:stubsg_o.ErrNotRec
         Squeeze $(Squeezeflags) @.!RunImage
 
