@@ -19,6 +19,7 @@
 
 /* 04.09.09 CJB Moved this code to a separate source file of its own.
    21.09.26 CJB Use CBOSLib to create the choices directory.
+   22.09.26 CJB Assert the expected Wimp message type in message handlers.
 */
 
 /* ANSI headers */
@@ -807,6 +808,7 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
 static int datasaveack_message(WimpMessage *message, void *handle)
 {
   assert(message != NULL);
+  assert(message->hdr.action_code == Wimp_MDataSaveAck);
   NOT_USED(handle);
 
   /* Check that it is a reply to our DataSave message */

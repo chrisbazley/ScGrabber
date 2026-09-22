@@ -33,6 +33,7 @@
                 called shade_setup_window() only if write_setup_window() failed!
    21.09.26 CJB Ensure only void * is converted to intptr_t.
                 Use taskmanager_enumerate_tasks instead of _kernel_swi.
+   22.09.26 CJB Assert the expected Wimp message type in message handlers.
 */
 
 /* ISO C library headers */
@@ -344,11 +345,10 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
   return 1; /* claim event */
 }
 
-/*
- * Message handler to be called on receipt of a Quit message from the Wimp.
- */
 static int quit_message(WimpMessage *message, void *handle)
 {
+  assert(message != NULL);
+  assert(message->hdr.action_code == Wimp_MQuit);
   NOT_USED(message);
   NOT_USED(handle);
 
