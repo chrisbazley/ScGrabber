@@ -20,6 +20,7 @@
 /* 04.09.09 CJB Moved this code to a separate source file of its own.
    21.09.26 CJB Use CBOSLib to create the choices directory.
    22.09.26 CJB Assert the expected Wimp message type in message handlers.
+   26.09.26 CJB Assert the Toolbox event numbers in event handlers.
 */
 
 /* ANSI headers */
@@ -592,7 +593,7 @@ static int numberrange_event(int event_code, ToolboxEvent *event, IdBlock *id_bl
   const NumberRangeValueChangedEvent *nrvce =
     (NumberRangeValueChangedEvent *)event;
 
-  NOT_USED(event_code);
+  assert(event_code == NumberRange_ValueChanged);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -619,7 +620,7 @@ static int stringset_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   const _kernel_oserror *e = NULL;
   int selected;
 
-  NOT_USED(event_code);
+  assert(event_code == StringSet_ValueChanged);
   NOT_USED(event);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -658,8 +659,7 @@ static int radiobutton_event(int event_code, ToolboxEvent *event, IdBlock *id_bl
   const RadioButtonStateChangedEvent *rbsce =
     (RadioButtonStateChangedEvent *)event;
 
-  NOT_USED(event_code);
-  NOT_USED(event);
+  assert(event_code == RadioButton_StateChanged);
   assert(id_block != NULL);
   NOT_USED(handle);
 
@@ -683,7 +683,7 @@ static int actionbutton_event(int event_code, ToolboxEvent *event, IdBlock *id_b
 {
   const _kernel_oserror *e = NULL;
 
-  NOT_USED(event_code);
+  assert(event_code == ActionButton_Selected);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -759,7 +759,7 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   WimpMessage msg;
   const char *leaf_name;
 
-  NOT_USED(event_code);
+  assert(event_code == Draggable_DragEnded);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
