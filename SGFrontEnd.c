@@ -34,6 +34,7 @@
    21.09.26 CJB Ensure only void * is converted to intptr_t.
                 Use taskmanager_enumerate_tasks instead of _kernel_swi.
    22.09.26 CJB Assert the expected Wimp message type in message handlers.
+   26.09.26 CJB Assert the Toolbox event numbers in event handlers.
    26.09.26 CJB Use portable header names and allow host compilation.
 */
 
@@ -213,7 +214,7 @@ static void exit_tidy(void)
 
 static int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  NOT_USED(event_code);
+  assert(event_code == ToolboxEvent_Quit);
   NOT_USED(event);
   NOT_USED(id_block);
   NOT_USED(handle);
@@ -271,7 +272,7 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
   int chars_out; /* no. of characters transmitted by fprintf() */
   const _kernel_oserror *e = NULL;
 
-  NOT_USED(event_code);
+  assert(event_code == SaveAs_SaveToFile);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -368,7 +369,7 @@ static int objectcreated_event(int event_code, ToolboxEvent *event, IdBlock *id_
   const ToolboxObjectAutoCreatedEvent *toace =
           (ToolboxObjectAutoCreatedEvent *) event;
 
-  NOT_USED(event_code);
+  assert(event_code == Toolbox_ObjectAutoCreated);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
