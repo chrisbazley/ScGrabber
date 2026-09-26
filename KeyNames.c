@@ -19,6 +19,7 @@
 
 /* 03.09.09 CJB Adapted from existing code for Star Fighter 3000.
    21.10.09 CJB Updated to use additional MessageTrans SWI veneers.
+   26.09.26 CJB Match header name case for host compilation.
 */
 
 /* ANSI headers */
@@ -32,16 +33,16 @@
 #include "toolbox.h"
 
 /* CBLibrary headers */
-#include "macros.h"
+#include "Macros.h"
 #include "msgtrans.h"
-#include "messtrans.h"
-#include "debug.h"
+#include "MessTrans.h"
+#include "Debug.h"
 
 /* Local headers */
 #include "KeyNames.h"
 
 #ifdef FORTIFY
-#include "FORTIFY:FORTIFY.h"
+#include "fortify.h"
 #endif
 
 #define KB_PATH "<ScGrabber$Dir>.Keyboards."

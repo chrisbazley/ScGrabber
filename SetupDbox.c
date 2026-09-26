@@ -21,6 +21,7 @@
    21.09.26 CJB Use CBOSLib to create the choices directory.
    22.09.26 CJB Assert the expected Wimp message type in message handlers.
    26.09.26 CJB Assert the Toolbox event numbers in event handlers.
+   26.09.26 CJB Match header name case for host compilation.
 */
 
 /* ANSI headers */
@@ -40,14 +41,14 @@
 #include "wimplib.h"
 
 /* CBLibrary headers */
-#include "debug.h"
-#include "macros.h"
+#include "Debug.h"
+#include "Macros.h"
 #include "msgtrans.h"
-#include "err.h"
-#include "deiconise.h"
-#include "gadgetutil.h"
-#include "pathtail.h"
-#include "strextra.h"
+#include "Err.h"
+#include "DeIconise.h"
+#include "GadgetUtil.h"
+#include "PathTail.h"
+#include "StrExtra.h"
 
 /* CBOSLib headers */
 #include "OSFile.h"
@@ -61,7 +62,7 @@
 #include "KeyNames.h"
 
 #ifdef FORTIFY
-#include "FORTIFY:FORTIFY.h"
+#include "fortify.h"
 #endif
 
 /* Window component IDs */
