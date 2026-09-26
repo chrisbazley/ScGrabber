@@ -553,13 +553,13 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
                                        ModeFlag_LineGap |
                                        ModeFlag_BBCLineGap) != 0)
   {
-    DEBUGF("Screen mode is unsuitable (flags = 0x%x)\n",
-           (unsigned int)mode_vars[VarIndex_ModeFlags]);
+    DEBUGF("Screen mode is unsuitable (flags = %" PRIdPTR ")\n",
+           mode_vars[VarIndex_ModeFlags]);
   }
   else if (mode_vars[VarIndex_Log2BPP] + 1 < SPRITE_TYPE_1BPP &&
            mode_vars[VarIndex_Log2BPP] + 1 > SPRITE_TYPE_32BPP)
   {
-    DEBUGF("Screen mode is unsuitable (bpp = %u)\n",
+    DEBUGF("Screen mode is unsuitable (bpp = %d)\n",
            1 << mode_vars[VarIndex_Log2BPP]);
   }
   else
@@ -610,8 +610,8 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
          one at a time. This is likely to be relatively slow. We can't read the
          whole palette at once using ColourTrans_ReadPalette because it outputs
          a simpler format that doesn't cater for flashing colours. :o( */
-      DEBUGF("Reading palette entries for %u colours\n",
-             (unsigned int)mode_vars[VarIndex_NColour] + 1);
+      DEBUGF("Reading palette entries for %" PRIdPTR " colours\n",
+             mode_vars[VarIndex_NColour] + 1);
 
       for (col = 0; col <= mode_vars[VarIndex_NColour]; col++)
       {
@@ -652,7 +652,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
 
     /* Write the sprite area header to the output file
        (not including the area size, which isn't required) */
-    DEBUGF("Writing sprite file header (%u bytes)\n",
+    DEBUGF("Writing sprite file header (%zu bytes)\n",
            sizeof(area_header) - sizeof(area_header.size));
 
     if (!FWRITE(&area_header.sprite_count,
@@ -736,7 +736,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
         {
           /* This old-style mode number is a good enough match to use */
           screen_mode = known_modes[i].ModeNumber;
-          DEBUGF("Substituting mode number %d\n", screen_mode);
+          DEBUGF("Substituting mode number %u\n", screen_mode);
           break;
         }
       }
@@ -775,7 +775,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
     DEBUGF("Sprite type is 0x%x\n", sprite_header.type);
 
     /* Write the sprite header to the output file */
-    DEBUGF("Writing sprite header (%u bytes)\n", sizeof(sprite_header));
+    DEBUGF("Writing sprite header (%zu bytes)\n", sizeof(sprite_header));
     if (!FWRITE(&sprite_header, sizeof(sprite_header), out))
     {
       e = _kernel_last_oserror();
