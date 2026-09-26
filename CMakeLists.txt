@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(ScGrabber C)
 
+option(USE_OPTIONAL "Enable the _Optional qualifier" OFF)
 option(USE_FORTIFY "Enable Fortify memory-allocation checking" OFF)
 option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
@@ -18,7 +19,25 @@ FetchContent_Declare(CBDebug
   GIT_REPOSITORY https://github.com/chrisbazley/CBDebugLib.git
   GIT_TAG main
 )
-FetchContent_MakeAvailable(CB CBOS CBDebug)
+FetchContent_Declare(OptionalAcornC
+  GIT_REPOSITORY https://github.com/chrisbazley/OptionalAcornC.git
+  GIT_TAG main
+)
+FetchContent_MakeAvailable(CB CBOS CBDebug OptionalAcornC)
+
+if(USE_OPTIONAL)
+  if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
+    message(FATAL_ERROR
+      "USE_OPTIONAL requires Christopher Bazley's Clang fork")
+  endif()
+  add_compile_definitions(USE_OPTIONAL)
+
+  if(CMAKE_GENERATOR STREQUAL "Xcode")
+    set(CMAKE_XCODE_ATTRIBUTE_RUN_CLANG_STATIC_ANALYZER "YES")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_ANALYZER_OTHER_FLAGS
+      "-analyzer-checker optionality,core -analyzer-max-loop 32")
+  endif()
+endif()
 
 if(USE_FORTIFY)
   FetchContent_Declare(Fortify
@@ -50,7 +69,8 @@ if(ENABLE_CLANG_TIDY)
     message(FATAL_ERROR "ENABLE_CLANG_TIDY is ON, but clang-tidy was not found")
   endif()
   set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXE}"
-    "--checks=-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.*")
+    "--checks=-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.*"
+    "--warnings-as-errors=clang-analyzer-optionality.*")
 endif()
 
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" SYSTEM_NAME_UPPER)
@@ -66,7 +86,7 @@ else()
   add_library(ScGrabberApp OBJECT ${FRONTEND_SOURCES})
 endif()
 
-target_link_libraries(ScGrabberApp PRIVATE CB CBOS CBDebug)
+target_link_libraries(ScGrabberApp PRIVATE CB CBOS CBDebug OptionalAcornC)
 target_compile_definitions(ScGrabberApp PRIVATE
   $<$<CONFIG:Debug>:DEBUG_OUTPUT>
 )
@@ -74,7 +94,7 @@ target_compile_definitions(ScGrabberApp PRIVATE
 # The module needs CMHG and assembler inputs for its native image. Compile
 # its C source on every platform, including cross-platform syntax checks.
 add_library(ScGrabberModule OBJECT ScrGrabber.c Errors.c ScrGrabberHdr.h)
-target_link_libraries(ScGrabberModule PRIVATE CB CBDebug)
+target_link_libraries(ScGrabberModule PRIVATE CB CBDebug OptionalAcornC)
 target_compile_definitions(ScGrabberModule PRIVATE
   $<$<CONFIG:Debug>:DEBUG_OUTPUT>
 )

@@ -1,0 +1,171 @@
+# This starter workflow is for a CMake project running on multiple platforms. There is a different starter workflow if you just want a single platform.
+# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
+name: CMake on multiple platforms
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.os }} ${{ matrix.c_compiler }} ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+
+      # Build Release and Debug with MSVC, GCC and Clang. Fortify is enabled
+      # later for Debug builds except the stock Clang configuration.
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release, Debug]
+        c_compiler: [gcc, clang, cl]
+        include:
+          - os: windows-latest
+            c_compiler: cl
+          - os: ubuntu-latest
+            c_compiler: gcc
+          - os: ubuntu-latest
+            c_compiler: clang
+        exclude:
+          - os: windows-latest
+            c_compiler: gcc
+          - os: windows-latest
+            c_compiler: clang
+          - os: ubuntu-latest
+            c_compiler: cl
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set reusable strings
+      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DUSE_OPTIONAL=OFF
+        -DUSE_FORTIFY=${{ matrix.build_type == 'Debug' && matrix.c_compiler != 'clang' }}
+        -S ${{ github.workspace }}
+
+    - name: Build
+      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+
+    - name: Test
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
+
+  optional-clang:
+    name: _Optional Clang ${{ matrix.build_type }} Fortify ${{ matrix.use_fortify }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_type: Release
+            use_fortify: "OFF"
+          - build_type: Debug
+            use_fortify: "ON"
+
+    env:
+      OPTIONAL_CLANG_TAG: v1.0.7-optional
+      OPTIONAL_CLANG_PLATFORM: linux-x86_64
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Download _Optional Clang
+        shell: bash
+        run: |
+          archive="clang+llvm-${OPTIONAL_CLANG_TAG}-${OPTIONAL_CLANG_PLATFORM}.tar.xz"
+          toolchain="$RUNNER_TEMP/optional-clang"
+
+          mkdir -p "$toolchain"
+
+          gh release download "$OPTIONAL_CLANG_TAG" \
+            --repo chrisbazley/llvm-project \
+            --pattern "$archive" \
+            --pattern "$archive.sha256" \
+            --dir "$RUNNER_TEMP"
+
+          cd "$RUNNER_TEMP"
+          sha256sum --check "$archive.sha256"
+          tar -xJf "$archive" -C "$toolchain"
+
+          echo "OPTIONAL_CLANG_ROOT=$toolchain" >> "$GITHUB_ENV"
+          echo "$toolchain/bin" >> "$GITHUB_PATH"
+
+      - name: Verify toolchain
+        shell: bash
+        run: |
+          test "$(command -v clang)" = "$OPTIONAL_CLANG_ROOT/bin/clang"
+          test "$(command -v clang-tidy)" = \
+            "$OPTIONAL_CLANG_ROOT/bin/clang-tidy"
+
+          clang --version
+          clang-tidy --version
+
+          clang-tidy \
+            --list-checks \
+            --checks='-*,clang-analyzer-optionality.OptionalityChecker' |
+            grep -F 'clang-analyzer-optionality.OptionalityChecker'
+
+          cat > "$RUNNER_TEMP/optional-smoke-test.c" <<'EOF'
+          int value_or_zero(_Optional int *value) {
+            return value ? *value : 0;
+          }
+          EOF
+
+          clang -std=c99 \
+            -fsyntax-only \
+            "$RUNNER_TEMP/optional-smoke-test.c"
+
+      - name: Configure with _Optional
+        shell: bash
+        run: |
+          cmake \
+            -S "$GITHUB_WORKSPACE" \
+            -B "$GITHUB_WORKSPACE/build-optional-${{ matrix.build_type }}" \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_C_COMPILER="$OPTIONAL_CLANG_ROOT/bin/clang" \
+            -DCLANG_TIDY_EXE="$OPTIONAL_CLANG_ROOT/bin/clang-tidy" \
+            -DUSE_OPTIONAL=ON \
+            -DUSE_FORTIFY=${{ matrix.use_fortify }} \
+            -DENABLE_CLANG_TIDY=ON
+
+      - name: Build and analyze
+        shell: bash
+        run: |
+          cmake \
+            --build "$GITHUB_WORKSPACE/build-optional-${{ matrix.build_type }}" \
+            --parallel 2
+
+      - name: Test
+        shell: bash
+        run: |
+          ctest \
+            --test-dir "$GITHUB_WORKSPACE/build-optional-${{ matrix.build_type }}" \
+            --build-config ${{ matrix.build_type }} \
+            --output-on-failure
