@@ -2,9 +2,9 @@
 
 
 # Toolflags:
-CCflags = -c -depend !Depend -IC: -throwback -DNDEBUG -DOLD_SCL_STUBS -fahi -apcs 3/32/fpe2/swst/fp/nofpr -memaccess -L22-S22-L41
-#CCflags = -c -depend !Depend -IC: -throwback -DOLD_SCL_STUBS -DDEBUG_OUTPUT -fahi -apcs 3/32/fpe2/swst/fp/nofpr
-C++flags = -c -depend !Depend -IC: -throwback
+CCflags = -c -depend !Depend -IC: -IFortify: -throwback -DNDEBUG -DOLD_SCL_STUBS -fahi -apcs 3/32/fpe2/swst/fp/nofpr -memaccess -L22-S22-L41
+#CCflags = -c -depend !Depend -IC: -IFortify: -throwback -DOLD_SCL_STUBS -DDEBUG_OUTPUT -fahi -apcs 3/32/fpe2/swst/fp/nofpr
+C++flags = -c -depend !Depend -IC: -IFortify: -throwback
 Linkflags = -aif -c++ -o $@
 ObjAsmflags = -throwback -NoCache -depend !Depend
 CMHGflags = 
