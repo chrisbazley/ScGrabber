@@ -23,6 +23,8 @@
    29.05.06 CJB Fixed bug in show_state_savepalette, which was actually
                 displaying the hot key enable state. Widespread changes to use
                 puts() or fputs() instead of printf() where appropriate.
+   26.09.26 CJB Use intptr_t for VDU variable values, including addresses.
+   26.09.26 CJB Allow host compilation and fix the filename assertion.
    07.06.06 CJB Made it configurable which 'hot' key is used. Now uses CBlibrary
                 function strdup() where appropriate.
                 Got rid of function lowercase(); cmd_handler() now uses
@@ -35,6 +37,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <assert.h>
 #include <limits.h>
 
@@ -54,7 +57,7 @@
 #include "MessTrans.h"
 
 #ifdef FORTIFY
-#include "Fortify:Fortify.h"
+#include "fortify.h"
 #endif
 
 #define MOD_NAME "ScreenGrabber"
@@ -201,7 +204,7 @@ typedef struct
 }
 ArgSwitch;
 
-extern const _kernel_oserror error_hotkey_syntax, error_palette_syntax, error_film_syntax, error_filmdelay_syntax, error_bad_interval, error_unknown_command, error_configure_syntax, error_uk_key_name;
+extern const _kernel_oserror error_hotkey_syntax, error_palette_syntax, error_film_syntax, error_filmdelay_syntax, error_bad_interval, error_configure_syntax, error_uk_key_name;
 
 /* Module state: */
 static unsigned int internal_key_no = KeyCode_Print; /* New 07.06.2006 */
@@ -238,7 +241,7 @@ static int os_version;
 static _kernel_oserror last_error; /* Most recent OS error to occur within the
                                       transient callback or ticker event
                                       routine. */
-static int mode_vars[VarIndex_LAST];
+static intptr_t mode_vars[VarIndex_LAST];
 
 static const char *key_names[] = {
   "Escape",
@@ -550,13 +553,13 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
                                        ModeFlag_LineGap |
                                        ModeFlag_BBCLineGap) != 0)
   {
-    DEBUGF("Screen mode is unsuitable (flags = 0x%x)\n",
+    DEBUGF("Screen mode is unsuitable (flags = %" PRIdPTR ")\n",
            mode_vars[VarIndex_ModeFlags]);
   }
   else if (mode_vars[VarIndex_Log2BPP] + 1 < SPRITE_TYPE_1BPP &&
            mode_vars[VarIndex_Log2BPP] + 1 > SPRITE_TYPE_32BPP)
   {
-    DEBUGF("Screen mode is unsuitable (bpp = %u)\n",
+    DEBUGF("Screen mode is unsuitable (bpp = %d)\n",
            1 << mode_vars[VarIndex_Log2BPP]);
   }
   else
@@ -566,7 +569,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
       VDUVar_DisplayStart, /* Not affected by sprite output redirection */
       VDUVar_EndOfList
     };
-    int disp_var_val[ARRAY_SIZE(disp_var_num) - 1];
+    intptr_t disp_var_val[ARRAY_SIZE(disp_var_num) - 1];
     void *display_start;
 
     /* Get the address of the frame buffer currently being displayed */
@@ -607,7 +610,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
          one at a time. This is likely to be relatively slow. We can't read the
          whole palette at once using ColourTrans_ReadPalette because it outputs
          a simpler format that doesn't cater for flashing colours. :o( */
-      DEBUGF("Reading palette entries for %u colours\n",
+      DEBUGF("Reading palette entries for %" PRIdPTR " colours\n",
              mode_vars[VarIndex_NColour] + 1);
 
       for (col = 0; col <= mode_vars[VarIndex_NColour]; col++)
@@ -649,7 +652,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
 
     /* Write the sprite area header to the output file
        (not including the area size, which isn't required) */
-    DEBUGF("Writing sprite file header (%u bytes)\n",
+    DEBUGF("Writing sprite file header (%zu bytes)\n",
            sizeof(area_header) - sizeof(area_header.size));
 
     if (!FWRITE(&area_header.sprite_count,
@@ -733,7 +736,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
         {
           /* This old-style mode number is a good enough match to use */
           screen_mode = known_modes[i].ModeNumber;
-          DEBUGF("Substituting mode number %d\n", screen_mode);
+          DEBUGF("Substituting mode number %u\n", screen_mode);
           break;
         }
       }
@@ -772,7 +775,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
     DEBUGF("Sprite type is 0x%x\n", sprite_header.type);
 
     /* Write the sprite header to the output file */
-    DEBUGF("Writing sprite header (%u bytes)\n", sizeof(sprite_header));
+    DEBUGF("Writing sprite header (%zu bytes)\n", sizeof(sprite_header));
     if (!FWRITE(&sprite_header, sizeof(sprite_header), out))
     {
       e = _kernel_last_oserror();
@@ -791,7 +794,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
     }
 
     /* Dump contents of frame buffer to output file (same format as a sprite) */
-    DEBUGF("Copying sprite bitmap from frame buffer %p (%u bytes)\n",
+    DEBUGF("Copying sprite bitmap from frame buffer %p (%" PRIdPTR " bytes)\n",
            display_start, mode_vars[VarIndex_ScreenSize]);
 
     if (!FWRITE(display_start, mode_vars[VarIndex_ScreenSize], out))
@@ -1073,7 +1076,11 @@ _kernel_oserror *screengrabber_initialise(const char *cmd_tail, int podule_base,
   NOT_USED(podule_base);
   assert(pw != NULL);
 
+  #ifdef ACORN_C
   DEBUG_SET_OUTPUT(DebugOutput_Reporter, MOD_NAME);
+#else
+  DEBUG_SET_OUTPUT(DebugOutput_StdErr, MOD_NAME);
+#endif
 
 #ifdef FORTIFY
   Fortify_SetOutputFunc(fortify_output);
@@ -1539,7 +1546,7 @@ static const _kernel_oserror *switch_filename( void *value, int index )
   assert( index == Arg_Filename || index == Arg_END );
   NOT_USED( index );
 
-  assert(new_name != NULL);
+  assert(file_path != NULL);
   if ( strcmp( file_path, value ) != 0 )
   {
     char *dup = strdup( value );

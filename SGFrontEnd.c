@@ -34,6 +34,7 @@
    21.09.26 CJB Ensure only void * is converted to intptr_t.
                 Use taskmanager_enumerate_tasks instead of _kernel_swi.
    22.09.26 CJB Assert the expected Wimp message type in message handlers.
+   26.09.26 CJB Use portable header names and allow host compilation.
 */
 
 /* ISO C library headers */
@@ -53,12 +54,13 @@
 #include "window.h"
 #include "gadgets.h"
 #include "saveas.h"
+#include "swis.h"
 
 /* CBLibrary headers */
-#include "err.h"
+#include "Err.h"
 #include "msgtrans.h"
 #include "MessTrans.h"
-#include "hourglass.h"
+#include "Hourglass.h"
 #include "Macros.h"
 #include "StrExtra.h"
 #include "FileUtils.h"
@@ -74,7 +76,7 @@
 #include "ScrGrabberHdr.h"
 
 #ifdef FORTIFY
-#include "FORTIFY:FORTIFY.h"
+#include "fortify.h"
 #endif /* FORTIFY */
 
 #define APP_NAME "ScGrabber"
@@ -371,12 +373,12 @@ static int objectcreated_event(int event_code, ToolboxEvent *event, IdBlock *id_
   assert(id_block != NULL);
   NOT_USED(handle);
 
-  if (strcmp(toace->template_name, "Window") == NULL)
+  if (strcmp(toace->template_name, "Window") == 0)
   {
     /* The Choices dialogue box has been created */
     setup_created(id_block->self_id);
   }
-  else if (strcmp(toace->template_name, "SaveAs") == NULL)
+  else if (strcmp(toace->template_name, "SaveAs") == 0)
   {
     save_id = id_block->self_id;
 
@@ -405,7 +407,11 @@ static void initialise()
          wimp_messages = 0;
   const _kernel_oserror *e;
 
+#ifdef ACORN_C
   DEBUG_SET_OUTPUT(DebugOutput_Reporter, APP_NAME);
+#else
+  DEBUG_SET_OUTPUT(DebugOutput_StdErr, APP_NAME);
+#endif
 
 #ifdef FORTIFY
   Fortify_SetOutputFunc(fortify_output);

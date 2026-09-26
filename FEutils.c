@@ -26,6 +26,7 @@
                 SFeditor.
    03.09.09 CJB Moved read_line_comm() function to a new source file.
    21.09.26 CJB Use CBOSLib to read catalogue information.
+   26.09.26 CJB Match header name case for host compilation.
 */
 
 /* ANSI headers */
@@ -40,7 +41,7 @@
 #include "wimp.h"
 
 /* CBLibrary headers */
-#include "err.h"
+#include "Err.h"
 #include "Macros.h"
 #include "msgtrans.h"
 #include "WimpExtra.h"

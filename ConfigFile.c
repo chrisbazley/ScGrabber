@@ -18,6 +18,7 @@
  */
 
 /* 03.09.09 CJB Moved this code to a separate source file of its own.
+   26.09.26 CJB Match header name case for host compilation.
 */
 
 /* ANSI headers */
@@ -34,16 +35,16 @@
 
 /* CBLibrary headers */
 #include "msgtrans.h"
-#include "strextra.h"
-#include "macros.h"
-#include "debug.h"
+#include "StrExtra.h"
+#include "Macros.h"
+#include "Debug.h"
 
 /* Local headers */
 #include "SGFrontEnd.h"
 #include "ConfigFile.h"
 
 #ifdef FORTIFY
-#include "FORTIFY:FORTIFY.h"
+#include "fortify.h"
 #endif
 
 static char *repeat_type_str = NULL;
