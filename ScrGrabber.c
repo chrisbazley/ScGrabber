@@ -30,6 +30,7 @@
                 Got rid of function lowercase(); cmd_handler() now uses
                 stricmp() instead of transforming the command argument string.
    26.09.26 CJB Annotate nullable pointers with _Optional.
+   27.09.26 CJB Express the pound-sign key name as an ASCII escape.
 */
 
 #include <stdio.h>
@@ -275,7 +276,7 @@ static const char *key_names[] = {
   "0",
   "-",
   "=",
-  "£",
+  "\xA3",
   "Backspace",
   "Insert",
   "Home",
