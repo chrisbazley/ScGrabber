@@ -22,6 +22,7 @@
    26.09.26 CJB Match header name case for host compilation.
    26.09.26 CJB Annotate nullable pointers with _Optional.
    27.09.26 CJB Use the correct format specifier for a buffer size.
+   27.09.26 CJB Declare the lookup token where it is needed.
 */
 
 /* ANSI headers */
@@ -168,7 +169,6 @@ _Optional const _kernel_oserror *lookup_key_name(unsigned int key_code,
                                        const _Optional char **key_name)
 {
   static char key_name_buf[MaxKeyNameLen + 1];
-  char token[MaxKeyTokenLen + 1];
   _Optional const _kernel_oserror *e = NULL;
 
   assert(key_name != NULL);
@@ -181,6 +181,7 @@ _Optional const _kernel_oserror *lookup_key_name(unsigned int key_code,
   }
   else
   {
+    char token[MaxKeyTokenLen + 1];
 #ifdef OLD_SCL_STUBS
     sprintf(token,
 #else

@@ -25,6 +25,7 @@
    26.09.26 CJB Annotate nullable pointers with _Optional.
    27.09.26 CJB Use size-appropriate types and format specifiers.
    27.09.26 CJB Keep assertion-only event codes used in release builds.
+   27.09.26 CJB Declare local variables at their first use.
 */
 
 /* ANSI headers */
@@ -173,12 +174,10 @@ void setup_created(ObjectId id)
       stringset_event
     }
   };
-  unsigned int i;
-
   setup_id = id;
 
   /* Register various Toolbox event handlers */
-  for (i = 0; i < ARRAY_SIZE(tbox_handlers); i++)
+  for (unsigned int i = 0; i < ARRAY_SIZE(tbox_handlers); i++)
   {
     EF(event_register_toolbox_handler(id,
                                       tbox_handlers[i].event_code,
@@ -193,7 +192,6 @@ void setup_created(ObjectId id)
   e = open_key_msgs();
   if (e == NULL)
   {
-    unsigned int k;
     _Optional char *available = NULL;
     size_t av_len = 0, av_size = 0;
 
@@ -203,7 +201,7 @@ void setup_created(ObjectId id)
     /* Populate a string set with the key names and record the key number
        corresponding to each member of the string set. */
     unsigned int l = 0;
-    for (k = 0; k < ARRAY_SIZE(stringset_mapping); k++)
+    for (unsigned int k = 0; k < ARRAY_SIZE(stringset_mapping); k++)
     {
       const _Optional char *key_name = NULL;
       static const char *esc_seq[] = {"\\,","\\\\"}; /* multi-character escape sequences */
@@ -344,9 +342,6 @@ static void close_msgs_exit(void)
 
 static _Optional const _kernel_oserror *setup_set_state(void)
 {
-  ComponentId radio;
-  unsigned int i;
-
   /* Set the displayed key code / name */
   ON_ERR_RTN_E(numberrange_set_value(0,
                                      setup_id,
@@ -356,7 +351,7 @@ static _Optional const _kernel_oserror *setup_set_state(void)
   ON_ERR_RTN_E(setup_set_name(key_code));
 
   /* Set the state of the option buttons */
-  for (i = 0; i < ARRAY_SIZE(opt_mapping); i++)
+  for (unsigned int i = 0; i < ARRAY_SIZE(opt_mapping); i++)
   {
     ON_ERR_RTN_E(optionbutton_set_state(0,
                                         setup_id,
@@ -371,6 +366,7 @@ static _Optional const _kernel_oserror *setup_set_state(void)
                                        &*save_path));
 
   /* Set the displayed filming speed */
+  ComponentId radio;
   switch (repeat_type)
   {
     case RepeatType_AutoSync:
@@ -460,14 +456,14 @@ static _Optional const _kernel_oserror *setup_set_name(unsigned int key_code)
 static _Optional const _kernel_oserror *get_file_path(_Optional char **new_fname)
 {
   _Optional const _kernel_oserror *e = NULL;
-  int new_fname_len;
-  char unused;
 
   assert(new_fname != NULL);
   if (new_fname == NULL)
     return msgs_error(DUMMY_ERRNO, "NoMem");
 
   /* Find buffer size required to get the base file path */
+  int new_fname_len;
+  char unused;
   e = writablefield_get_value(0,
                               setup_id,
                               ComponentId_FilePath,
@@ -513,11 +509,9 @@ static bool setup_get_state(void)
 {
   _Optional char *new_fname = NULL;
   int state;
-  size_t len;
   ComponentId selected;
   bool success = false;
   _Optional const _kernel_oserror *e = NULL;
-  unsigned int i;
 
   /* Get the new base file path */
   e = get_file_path(&new_fname);
@@ -532,7 +526,7 @@ static bool setup_get_state(void)
   }
 
   /* Check the length of the new leaf name */
-  len = strlen(pathtail(&*new_fname, 1));
+  size_t len = strlen(pathtail(&*new_fname, 1));
   DEBUGF("Length of leaf name is %zu\n", len);
   if (len > 5)
   {
@@ -563,7 +557,7 @@ static bool setup_get_state(void)
   key_code = state;
 
   /* Get the state of the option buttons */
-  for (i = 0; i < ARRAY_SIZE(opt_mapping); i++)
+  for (unsigned int i = 0; i < ARRAY_SIZE(opt_mapping); i++)
   {
     e = optionbutton_get_state(0,
                                setup_id,
@@ -789,8 +783,6 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   const DraggableDragEndedEvent *todde = (DraggableDragEndedEvent *)event;
   _Optional char *new_fname = NULL;
   _Optional const _kernel_oserror *e = NULL;
-  WimpMessage msg;
-  const char *leaf_name;
 
   assert(event_code == Draggable_DragEnded);
   NOT_USED(event_code);
@@ -806,9 +798,10 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   e = get_file_path(&new_fname);
   if (e == NULL && new_fname != NULL)
   {
+    WimpMessage msg;
     assert(new_fname != NULL);
     /* Copy only the leaf name into the body of the Wimp message */
-    leaf_name = pathtail(&*new_fname, 1);
+    const char *leaf_name = pathtail(&*new_fname, 1);
     STRCPY_SAFE(msg.data.data_save.leaf_name, leaf_name);
     free(new_fname);
 

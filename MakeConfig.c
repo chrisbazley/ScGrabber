@@ -20,6 +20,7 @@
 /* 04.09.09 CJB Created this source file.
    27.09.26 CJB Require a non-null output buffer, even for size queries.
    27.09.26 CJB Use the correct format specifiers for pointers and sizes.
+   27.09.26 CJB Defer the output-length declaration until construction.
 */
 
 /* ANSI headers */
@@ -38,7 +39,6 @@
 int make_config_cmd(char *s, size_t n)
 {
   char sync[32];
-  int nchars;
 
   assert(s != NULL);
   DEBUGF("Making config command with buffer %p of size %zu\n", (void *)s, n);
@@ -61,6 +61,7 @@ int make_config_cmd(char *s, size_t n)
 
   assert(save_path != NULL);
 
+  int nchars;
 #ifdef OLD_SCL_STUBS
   {
     /* Temporary buffer in which to construct the first part of the command,

@@ -23,6 +23,7 @@
    26.09.26 CJB Pass unsigned characters to isspace.
    27.09.26 CJB Use the correct type for strtoul's end pointer.
    27.09.26 CJB Use size-appropriate types and format specifiers.
+   27.09.26 CJB Declare loop counters and conversion results at first use.
 */
 
 /* ANSI headers */
@@ -131,9 +132,6 @@ _Optional const _kernel_oserror *save_config(const char *dest_file)
   }
   else
   {
-    int chars_out; /* no. of characters transmitted by fprintf() */
-    unsigned int i;
-
     /* We save the value of repeat_type as a string rather than an integer,
        so set up a temporary string value for that purpose. */
     switch (repeat_type)
@@ -152,8 +150,9 @@ _Optional const _kernel_oserror *save_config(const char *dest_file)
         break;
     }
 
-    for (i = 0; i < ARRAY_SIZE(config_map) && e == NULL; i++)
+    for (unsigned int i = 0; i < ARRAY_SIZE(config_map) && e == NULL; i++)
     {
+      int chars_out; /* no. of characters transmitted by fprintf() */
       switch (config_map[i].type)
       {
         case Type_Boolean:
@@ -240,15 +239,13 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
     {
       /* Having identified which variable to set, decode the rest of the
          input line */
-      unsigned long input;
-
       switch (config_map[i].type)
       {
         case Type_Boolean:
           {
             char *end;
 
-            input = strtoul(value, &end, 10);
+            unsigned long input = strtoul(value, &end, 10);
             if (*end == '\n')
             {
               *(bool *)config_map[i].value = (input != 0);
@@ -266,7 +263,7 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
           {
             char *end;
 
-            input = strtoul(value, &end, 10);
+            unsigned long input = strtoul(value, &end, 10);
             if (*end == '\n')
             {
               *(int *)config_map[i].value = (int)input;
