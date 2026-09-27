@@ -35,6 +35,7 @@
                 output buffer.
    27.09.26 CJB Make debug output format-safe.
    27.09.26 CJB Use portable types and conversions for host compilation.
+   27.09.26 CJB Fully initialise command-switch state entries.
 */
 
 #include <stdio.h>
@@ -205,7 +206,7 @@ typedef struct
   struct
   {
     int index;
-    const char *string;
+    const _Optional char *string;
   }
   states[4];
 }
@@ -1622,49 +1623,50 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
         show_state_enabled,
         switch_on_or_off,
         CMD_SGrabHotKey,
-        { { Arg_On, "on" }, { Arg_Off, "off" }, { Arg_END } }
+        { { Arg_On, "on" }, { Arg_Off, "off" }, { Arg_END, NULL } }
       },
       {
         0, /* Key name/number already shown by show_state_enabled */
         switch_key_name_or_code, /* Only handles *SGrabConfigure */
         -1, /* Key name/number are configured by *SGrabHotKey */
-        { { Arg_KeyName }, { Arg_KeyCode }, { Arg_END } }
+        { { Arg_KeyName, NULL }, { Arg_KeyCode, NULL }, { Arg_END, NULL } }
       },
       {
         show_state_savepalette,
         switch_palette,
         CMD_SGrabPalette,
-        { { Arg_Palette, "on" }, { Arg_NoPalette, "off" }, { Arg_END } }
+        { { Arg_Palette, "on" }, { Arg_NoPalette, "off" }, { Arg_END, NULL } }
       },
       {
         show_state_counter, /* Only present for *SGrabStatus */
         0,
         -1, /* Must handle *SGrabResetCount separately because of unusual behaviour */
-        { { Arg_END } }
+        { { Arg_END, NULL } }
       },
       {
         show_state_file_path,
         switch_filename,
         CMD_SGrabFilename,
-        { { Arg_Filename }, { Arg_END } }
+        { { Arg_Filename, NULL }, { Arg_END, NULL } }
       },
       {
         show_state_film,
         switch_single_or_film,
         CMD_SGrabFilm,
-        { { Arg_Film, "on" }, { Arg_Single, "off" }, { Arg_END } }
+        { { Arg_Film, "on" }, { Arg_Single, "off" }, { Arg_END, NULL } }
       },
       {
         show_state_filmdelay,
         switch_interval,
         CMD_SGrabFilmDelay,
-        { { Arg_Interval }, { Arg_AutoSync, "auto" }, { Arg_HalfSync, "half" }, { Arg_END } }
+        { { Arg_Interval, NULL }, { Arg_AutoSync, "auto" },
+          { Arg_HalfSync, "half" }, { Arg_END, NULL } }
       },
       {
         show_state_sprite_type,
         switch_new_sprite, /* Only handles *SGrabConfigure */
         -1, /* No command to configure sprite format except *SGrabConfigure */
-        { { Arg_NewSprite }, { Arg_OldSprite }, { Arg_END } }
+        { { Arg_NewSprite, NULL }, { Arg_OldSprite, NULL }, { Arg_END, NULL } }
       }
     };
     unsigned int i;
@@ -1764,7 +1766,7 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
             {
 
               if ( sw->states[j].string == NULL ||
-                   stricmp( read_args_buf[0], sw->states[j].string ) != 0 )
+                   stricmp( read_args_buf[0], &*sw->states[j].string ) != 0 )
                 continue;
 
               /* Translate state name into equivalent SGrabConfigure argument index */
