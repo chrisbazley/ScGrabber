@@ -24,6 +24,7 @@
    26.09.26 CJB Match header name case for host compilation.
    26.09.26 CJB Annotate nullable pointers with _Optional.
    27.09.26 CJB Use size-appropriate types and format specifiers.
+   27.09.26 CJB Keep assertion-only event codes used in release builds.
 */
 
 /* ANSI headers */
@@ -622,6 +623,7 @@ static int numberrange_event(int event_code, ToolboxEvent *event, IdBlock *id_bl
     (NumberRangeValueChangedEvent *)event;
 
   assert(event_code == NumberRange_ValueChanged);
+  NOT_USED(event_code);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -649,6 +651,7 @@ static int stringset_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   int selected;
 
   assert(event_code == StringSet_ValueChanged);
+  NOT_USED(event_code);
   NOT_USED(event);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -688,6 +691,7 @@ static int radiobutton_event(int event_code, ToolboxEvent *event, IdBlock *id_bl
     (RadioButtonStateChangedEvent *)event;
 
   assert(event_code == RadioButton_StateChanged);
+  NOT_USED(event_code);
   assert(id_block != NULL);
   NOT_USED(handle);
 
@@ -712,6 +716,7 @@ static int actionbutton_event(int event_code, ToolboxEvent *event, IdBlock *id_b
   _Optional const _kernel_oserror *e = NULL;
 
   assert(event_code == ActionButton_Selected);
+  NOT_USED(event_code);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -788,6 +793,7 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   const char *leaf_name;
 
   assert(event_code == Draggable_DragEnded);
+  NOT_USED(event_code);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
