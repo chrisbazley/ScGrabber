@@ -30,6 +30,12 @@
                 Got rid of function lowercase(); cmd_handler() now uses
                 stricmp() instead of transforming the command argument string.
    26.09.26 CJB Annotate nullable pointers with _Optional.
+   27.09.26 CJB Express the pound-sign key name as an ASCII escape.
+   27.09.26 CJB Correct screen-mode validation and initialise the OS_ReadArgs
+                output buffer.
+   27.09.26 CJB Make debug output format-safe.
+   27.09.26 CJB Use portable types and conversions for host compilation.
+   27.09.26 CJB Fully initialise command-switch state entries.
 */
 
 #include <stdio.h>
@@ -200,7 +206,7 @@ typedef struct
   struct
   {
     int index;
-    const char *string;
+    const _Optional char *string;
   }
   states[4];
 }
@@ -275,7 +281,7 @@ static const char *key_names[] = {
   "0",
   "-",
   "=",
-  "£",
+  "\xA3",
   "Backspace",
   "Insert",
   "Home",
@@ -471,7 +477,7 @@ static _Optional const _kernel_oserror *check_disp_bank(void *pw)
     }
     else
     {
-      DEBUGF("Adding callback to routine %p\n", callback_veneer);
+      DEBUGF("Adding callback\n");
       callback_pending = true;
       e = _swix(OS_AddCallBack, _INR(0,1), callback_veneer, pw);
       if (e != NULL)
@@ -550,19 +556,19 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
 
   /* Check that the current screen mode is suitable for saving the
      display as a sprite. */
-  if (mode_vars[VarIndex_ModeFlags] & (ModeFlag_NonGraphics |
-                                       ModeFlag_Teletext |
-                                       ModeFlag_LineGap |
-                                       ModeFlag_BBCLineGap) != 0)
+  if ((mode_vars[VarIndex_ModeFlags] & (ModeFlag_NonGraphics |
+                                        ModeFlag_Teletext |
+                                        ModeFlag_LineGap |
+                                        ModeFlag_BBCLineGap)) != 0)
   {
     DEBUGF("Screen mode is unsuitable (flags = %" PRIdPTR ")\n",
            mode_vars[VarIndex_ModeFlags]);
   }
-  else if (mode_vars[VarIndex_Log2BPP] + 1 < SPRITE_TYPE_1BPP &&
+  else if (mode_vars[VarIndex_Log2BPP] + 1 < SPRITE_TYPE_1BPP ||
            mode_vars[VarIndex_Log2BPP] + 1 > SPRITE_TYPE_32BPP)
   {
-    DEBUGF("Screen mode is unsuitable (bpp = %d)\n",
-           1 << mode_vars[VarIndex_Log2BPP]);
+    DEBUGF("Screen mode is unsuitable (log2 bpp = %" PRIdPTR ")\n",
+           mode_vars[VarIndex_Log2BPP]);
   }
   else
   {
@@ -700,14 +706,15 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     if (os_version < MinOSVersion)
     {
       /* Fall-back code for RISC OS 3.1 (doesn't support SWI OS_ScreenMode) */
-      screen_mode = _kernel_osbyte(OSByte_ReadCharAndMode, 0, 0);
-      if (screen_mode == _kernel_ERROR)
+      int const result = _kernel_osbyte(OSByte_ReadCharAndMode, 0, 0);
+      if (result == _kernel_ERROR)
       {
         e = _kernel_last_oserror();
         goto error;
       }
       /* The mode number is returned in R2 */
-      screen_mode = (screen_mode & OSByteR2ResultMask) >> OSByteR2ResultShift;
+      screen_mode = ((unsigned int)result & OSByteR2ResultMask) >>
+                    OSByteR2ResultShift;
     }
     else
 #endif
@@ -811,7 +818,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     fclose(out);
     out = NULL;
 #else
-    _kernel_osfind(0, (char *)out);
+    _kernel_osfind(0, (void *)(intptr_t)out);
     out = 0;
 #endif
 
@@ -827,7 +834,7 @@ error:
     fclose(out);
 #else
   if (out != 0)
-    _kernel_osfind(0, (char *)out);
+    _kernel_osfind(0, (void *)(intptr_t)out);
 #endif
 
   return e;
@@ -944,7 +951,7 @@ static _Optional const _kernel_oserror *disable_hotkey(void)
 #ifdef FORTIFY
 static void fortify_output(const char *text)
 {
-  DEBUGF(text);
+  DEBUGF("%s", text);
 }
 #endif
 
@@ -1036,8 +1043,8 @@ int event_handler(_kernel_swi_regs *r, void *pw)
               else
                 freq = interval;
 
-              DEBUGF("Registering ticker event routine %p with frequency %d\n",
-                     ticker_veneer, freq);
+              DEBUGF("Registering ticker event routine with frequency %d\n",
+                     freq);
 
               ticker_running = true;
               e = _swix(OS_CallEvery, _INR(0,2), freq - 1, &ticker_veneer, pw);
@@ -1195,7 +1202,7 @@ _Optional _kernel_oserror *screengrabber_finalise(int fatal, int podule, void *p
 static int key_name_to_num(const char *key_name)
 {
   /* Returns the internal key number matching the specified key name */
-  int i, key_code = -1;
+  int key_code = -1;
 
   assert(key_name != NULL);
   if (stricmp("~", key_name) == 0)
@@ -1204,11 +1211,12 @@ static int key_name_to_num(const char *key_name)
   }
   else
   {
-    for (i = 0; i < ARRAY_SIZE(key_names); i++)
+    for (size_t i = 0; i < ARRAY_SIZE(key_names); i++)
     {
       if (stricmp(key_names[i], key_name) == 0)
       {
-        key_code = i;
+        assert(i <= INT_MAX);
+        key_code = (int)i;
         break;
       }
     }
@@ -1236,7 +1244,8 @@ static int read_evaluated(const uint8_t *eval)
   {
     value = 0;
   }
-  DEBUGF("Decoded evaluated argument at %p as %d\n", eval, value);
+  DEBUGF("Decoded evaluated argument at %p as %d\n",
+         (const void *)eval, value);
   return value;
 }
 
@@ -1580,7 +1589,7 @@ static _Optional const _kernel_oserror *switch_filename( void *value, int index 
 _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void *pw)
 {
   _Optional const _kernel_oserror *e = NULL;
-  void *read_args_buf[80];
+  void *read_args_buf[80] = {0};
 
   assert(arg_string != NULL || argc == 0);
   NOT_USED(pw);
@@ -1606,11 +1615,6 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
               read_args_buf,
               sizeof(read_args_buf));
   }
-  else
-  {
-    read_args_buf[0] = 0;
-  }
-
   if (e == NULL)
   {
     static const ArgSwitch switches[] =
@@ -1619,49 +1623,50 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
         show_state_enabled,
         switch_on_or_off,
         CMD_SGrabHotKey,
-        { { Arg_On, "on" }, { Arg_Off, "off" }, { Arg_END } }
+        { { Arg_On, "on" }, { Arg_Off, "off" }, { Arg_END, NULL } }
       },
       {
         0, /* Key name/number already shown by show_state_enabled */
         switch_key_name_or_code, /* Only handles *SGrabConfigure */
         -1, /* Key name/number are configured by *SGrabHotKey */
-        { { Arg_KeyName }, { Arg_KeyCode }, { Arg_END } }
+        { { Arg_KeyName, NULL }, { Arg_KeyCode, NULL }, { Arg_END, NULL } }
       },
       {
         show_state_savepalette,
         switch_palette,
         CMD_SGrabPalette,
-        { { Arg_Palette, "on" }, { Arg_NoPalette, "off" }, { Arg_END } }
+        { { Arg_Palette, "on" }, { Arg_NoPalette, "off" }, { Arg_END, NULL } }
       },
       {
         show_state_counter, /* Only present for *SGrabStatus */
         0,
         -1, /* Must handle *SGrabResetCount separately because of unusual behaviour */
-        { { Arg_END } }
+        { { Arg_END, NULL } }
       },
       {
         show_state_file_path,
         switch_filename,
         CMD_SGrabFilename,
-        { { Arg_Filename }, { Arg_END } }
+        { { Arg_Filename, NULL }, { Arg_END, NULL } }
       },
       {
         show_state_film,
         switch_single_or_film,
         CMD_SGrabFilm,
-        { { Arg_Film, "on" }, { Arg_Single, "off" }, { Arg_END } }
+        { { Arg_Film, "on" }, { Arg_Single, "off" }, { Arg_END, NULL } }
       },
       {
         show_state_filmdelay,
         switch_interval,
         CMD_SGrabFilmDelay,
-        { { Arg_Interval }, { Arg_AutoSync, "auto" }, { Arg_HalfSync, "half" }, { Arg_END } }
+        { { Arg_Interval, NULL }, { Arg_AutoSync, "auto" },
+          { Arg_HalfSync, "half" }, { Arg_END, NULL } }
       },
       {
         show_state_sprite_type,
         switch_new_sprite, /* Only handles *SGrabConfigure */
         -1, /* No command to configure sprite format except *SGrabConfigure */
-        { { Arg_NewSprite }, { Arg_OldSprite }, { Arg_END } }
+        { { Arg_NewSprite, NULL }, { Arg_OldSprite, NULL }, { Arg_END, NULL } }
       }
     };
     unsigned int i;
@@ -1761,7 +1766,7 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
             {
 
               if ( sw->states[j].string == NULL ||
-                   stricmp( read_args_buf[0], sw->states[j].string ) != 0 )
+                   stricmp( read_args_buf[0], &*sw->states[j].string ) != 0 )
                 continue;
 
               /* Translate state name into equivalent SGrabConfigure argument index */

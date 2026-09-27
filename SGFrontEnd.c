@@ -37,6 +37,9 @@
    26.09.26 CJB Assert the Toolbox event numbers in event handlers.
    26.09.26 CJB Use portable header names and allow host compilation.
    26.09.26 CJB Annotate nullable pointers with _Optional.
+   27.09.26 CJB Make Fortify debug output format-safe.
+   27.09.26 CJB Keep assertion-only event codes used in release builds and
+                use a strict prototype for initialise().
 */
 
 /* ISO C library headers */
@@ -148,7 +151,7 @@ unsigned int key_code = 13; /* Internal key number */
 #ifdef FORTIFY
 static void fortify_output(const char *text)
 {
-  DEBUGF(text);
+  DEBUGF("%s", text);
 }
 #endif /* FORTIFY */
 
@@ -220,12 +223,12 @@ static void exit_tidy(void)
 static int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   assert(event_code == ToolboxEvent_Quit);
+  NOT_USED(event_code);
   NOT_USED(event);
   NOT_USED(id_block);
   NOT_USED(handle);
 
   exit(EXIT_SUCCESS);
-  return 1; /* claim event */
 }
 
 /*
@@ -278,6 +281,7 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
   _Optional const _kernel_oserror *e = NULL;
 
   assert(event_code == SaveAs_SaveToFile);
+  NOT_USED(event_code);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -362,7 +366,6 @@ static int quit_message(WimpMessage *message, void *handle)
   NOT_USED(handle);
 
   exit(EXIT_SUCCESS);
-  return 1;
 }
 
 /*
@@ -376,6 +379,7 @@ static int objectcreated_event(int event_code, ToolboxEvent *event, IdBlock *id_
           (ToolboxObjectAutoCreatedEvent *) event;
 
   assert(event_code == Toolbox_ObjectAutoCreated);
+  NOT_USED(event_code);
   assert(event != NULL);
   assert(id_block != NULL);
   NOT_USED(handle);
@@ -407,7 +411,7 @@ static  WimpPollBlock  poll_block;
 static  IdBlock        id_block;
 static  MessagesFD     mfd;
 
-static void initialise()
+static void initialise(void)
 {
 
   int    toolbox_events = 0,

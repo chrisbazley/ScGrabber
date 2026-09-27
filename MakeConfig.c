@@ -19,6 +19,7 @@
 
 /* 04.09.09 CJB Created this source file.
    27.09.26 CJB Require a non-null output buffer, even for size queries.
+   27.09.26 CJB Use the correct format specifiers for pointers and sizes.
 */
 
 /* ANSI headers */
@@ -40,7 +41,7 @@ int make_config_cmd(char *s, size_t n)
   int nchars;
 
   assert(s != NULL);
-  DEBUGF("Making config command with buffer %p of size %u\n", s, n);
+  DEBUGF("Making config command with buffer %p of size %zu\n", (void *)s, n);
 
   switch (repeat_type)
   {
@@ -93,19 +94,19 @@ int make_config_cmd(char *s, size_t n)
        string into it as will fit */
     if (n > 0)
     {
-      DEBUGF("Copying up to %d chars into caller's buffer\n", n - 1);
+      DEBUGF("Copying up to %zu chars into caller's buffer\n", n - 1);
       strncpy(s, temp, n - 1);
 
       /* If there is any space remaining in the caller's buffer then append
          as much of the file path as will fit */
       if (nchars < n - 1)
       {
-        DEBUGF("Copying up to %d chars to offset %d in caller's buffer\n",
+        DEBUGF("Copying up to %zu chars to offset %d in caller's buffer\n",
                n - 1 - nchars, nchars);
         strncpy(s + nchars, save_path, n - 1 - nchars);
       }
 
-      DEBUGF("Adding terminator at offset %d\n", n - 1);
+      DEBUGF("Adding terminator at offset %zu\n", n - 1);
       s[n - 1] = '\0'; /* strncpy pads with zeros only if the source string is
                           shorter than the maximum no. of characters to copy. */
     }

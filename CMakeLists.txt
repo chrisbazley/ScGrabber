@@ -5,6 +5,7 @@ option(USE_OPTIONAL "Enable the _Optional qualifier" OFF)
 option(USE_FORTIFY "Enable Fortify memory-allocation checking" OFF)
 option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
+include(CTest)
 include(FetchContent)
 
 FetchContent_Declare(CB

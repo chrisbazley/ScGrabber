@@ -22,6 +22,7 @@
    26.09.26 CJB Annotate nullable pointers with _Optional.
    26.09.26 CJB Pass unsigned characters to isspace.
    27.09.26 CJB Use the correct type for strtoul's end pointer.
+   27.09.26 CJB Use size-appropriate types and format specifiers.
 */
 
 /* ANSI headers */
@@ -216,8 +217,8 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
   {
     /* Calculate the length of the prefix in the input line */
     assert(colon > line);
-    unsigned int name_len = colon - line;
-    DEBUGF("Length of input line prefix is %d\n", name_len);
+    size_t name_len = colon - line;
+    DEBUGF("Length of input line prefix is %zu\n", name_len);
 
     const char *value = colon + 1;
     DEBUGF("Value to assign is '%s'\n", value);
@@ -269,7 +270,7 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
             if (*end == '\n')
             {
               *(int *)config_map[i].value = (int)input;
-              DEBUGF("Got integer value %u\n", input);
+              DEBUGF("Got integer value %lu\n", input);
             }
             else
             {
@@ -285,8 +286,7 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
 
             assert(config_map[i].type == Type_String);
 
-            /* Find end of string value (first whitespace character)
-               Could use strpbrk here, but this is probably faster. */
+            /* Find end of string value (first whitespace character). */
             for (end = value; *end != '\0'; end++)
             {
               if (isspace((unsigned char)*end))
@@ -388,8 +388,6 @@ _Optional const _kernel_oserror *load_config(const char *source_file)
 
     for (line = 1; e == NULL; line++)
     {
-      int c;
-
       /* Read as much of the next line as will fit in our string buffer */
       _Optional char *got = fgets(read_line, sizeof(read_line), &*f);
       if (got == NULL)
@@ -410,21 +408,20 @@ _Optional const _kernel_oserror *load_config(const char *source_file)
         break;
       }
 
-      /* Find the index of the last non-whitespace character */
-      for (c = strlen(&*got) - 1; c >= 0; c--)
-      {
-        if (!isspace((unsigned char)got[c]))
-          break;
-      }
-      if (c < 0)
+      /* Find the number of characters before any trailing whitespace. */
+      size_t end = strlen(&*got);
+      while (end > 0 && isspace((unsigned char)got[end - 1]))
+        end--;
+
+      if (end == 0)
         continue; /* skip lines which consist only of whitespace */
 
       /* Strip any trailing spaces by overwriting them with a linefeed
          followed by a nul terminator, if there is room to do so. */
-      if (c + 2 < sizeof(read_line))
+      if (end + 1 < sizeof(read_line))
       {
-        got[c + 1] = '\n';
-        got[c + 2] = '\0';
+        got[end] = '\n';
+        got[end + 1] = '\0';
       }
       e = interpret_line(&*got, source_file, line);
     }
