@@ -29,6 +29,7 @@
                 function strdup() where appropriate.
                 Got rid of function lowercase(); cmd_handler() now uses
                 stricmp() instead of transforming the command argument string.
+   26.09.26 CJB Annotate nullable pointers with _Optional.
 */
 
 #include <stdio.h>
@@ -50,6 +51,7 @@
 #include "StrExtra.h"
 #include "PathTail.h"
 #include "Macros.h"
+#include "Optional.h"
 #include "Debug.h"
 #include "FileUtils.h"
 #include "PalEntry.h"
@@ -193,7 +195,7 @@ enum
 typedef struct
 {
   void (*show)( void );
-  const _kernel_oserror * (*handler)( void *value, int index );
+  _Optional const _kernel_oserror * (*handler)( void *value, int index );
   int cmd_no;
   struct
   {
@@ -211,7 +213,7 @@ static unsigned int internal_key_no = KeyCode_Print; /* New 07.06.2006 */
 static unsigned int max_num_shots; /* Number of screen shots that can be
                                       saved before the suffix returns to 0 */
 static unsigned int shot_num = 0; /* Numeric suffix for screenshot files */
-static char *file_path = NULL; /* Base file path for screenshots */
+static _Optional char *file_path = NULL; /* Base file path for screenshots */
 static bool grab_enable = false; /* Is hotkey enabled? */
 static bool save_palette = true; /* Should the palette be saved with each
                                     screenshot? */
@@ -378,27 +380,27 @@ known_modes[] =
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *no_mem_error(void)
+static _Optional const _kernel_oserror *no_mem_error(void)
 {
   return messagetrans_error_lookup(NULL, ErrorNum_NoMem, "NoMem", 0);
 }
 
 /* ----------------------------------------------------------------------- */
 
-static void record_error(const _kernel_oserror *e)
+static void record_error(_Optional const _kernel_oserror *e)
 {
   if (e != NULL)
   {
-    memcpy(&last_error, e, sizeof(last_error));
+    memcpy(&last_error, &*e, sizeof(last_error));
     error_recorded = true;
   }
 }
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *check_disp_bank(void *pw)
+static _Optional const _kernel_oserror *check_disp_bank(void *pw)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   bool do_screenshot = false;
 
   assert(pw != NULL);
@@ -482,7 +484,7 @@ static const _kernel_oserror *check_disp_bank(void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *ticker_handler(_kernel_swi_regs *r, void *pw)
+_Optional _kernel_oserror *ticker_handler(_kernel_swi_regs *r, void *pw)
 {
   NOT_USED(r);
   assert(pw != NULL);
@@ -495,7 +497,7 @@ _kernel_oserror *ticker_handler(_kernel_swi_regs *r, void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *read_mode_vars(void)
+static _Optional const _kernel_oserror *read_mode_vars(void)
 {
   /* Must keep the following array synchronised with the enumeration of mode
      variable value indicies */
@@ -514,7 +516,7 @@ static const _kernel_oserror *read_mode_vars(void)
   };
 
   /* Read information about the current screen mode */
-  const _kernel_oserror *e = os_read_vdu_variables(variable_nos, mode_vars);
+  _Optional const _kernel_oserror *e = os_read_vdu_variables(variable_nos, mode_vars);
   mode_vars_valid = (e == NULL);
 
   return e;
@@ -522,19 +524,19 @@ static const _kernel_oserror *read_mode_vars(void)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *save_screen(const char *save_file_path)
+static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
 {
   unsigned int screen_mode; /* this MUST be unsigned because it might be a
                                top-bit-set address */
-  PaletteEntry *palette = NULL;
+  _Optional PaletteEntry *palette = NULL;
   unsigned int i, palette_size;
 #ifdef USE_STDIO
-  FILE *out = NULL;
+  _Optional FILE *out = NULL;
 #else
   _kernel_osgbpb_block inout;
   int out = 0;
 #endif
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   SpriteAreaHeader area_header;
   SpriteHeader sprite_header;
 
@@ -786,7 +788,7 @@ static const _kernel_oserror *save_screen(const char *save_file_path)
     if (palette != NULL)
     {
       DEBUGF("Writing sprite palette (%u bytes)\n", palette_size);
-      if (!FWRITE(palette, palette_size, out))
+      if (!FWRITE(&*palette, palette_size, out))
       {
         e =  _kernel_last_oserror();
         goto error;
@@ -833,21 +835,24 @@ error:
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *take_numbered_shot(void)
+static _Optional const _kernel_oserror *take_numbered_shot(void)
 {
   /* construct file path */
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
-  char *full_path = malloc(strlen(file_path) + NumSuffixLen + 1);
+  assert(file_path != NULL);
+  if (file_path == NULL)
+    return no_mem_error();
+  _Optional char *full_path = malloc(strlen(&*file_path) + NumSuffixLen + 1);
   if (full_path == NULL)
   {
     e = no_mem_error();
   }
   else
   {
-    sprintf(full_path, "%s%.*u", file_path, NumSuffixLen, shot_num);
+    sprintf(&*full_path, "%s%.*u", file_path, NumSuffixLen, shot_num);
 
-    e = save_screen(full_path);
+    e = save_screen(&*full_path);
     if (e == NULL)
     {
       /* Advance screenshot counter */
@@ -861,7 +866,7 @@ static const _kernel_oserror *take_numbered_shot(void)
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *callback_handler(_kernel_swi_regs *r, void *pw)
+_Optional _kernel_oserror *callback_handler(_kernel_swi_regs *r, void *pw)
 {
   NOT_USED(r);
   NOT_USED(pw);
@@ -876,9 +881,9 @@ _kernel_oserror *callback_handler(_kernel_swi_regs *r, void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *remove_ticker(void *pw)
+static _Optional const _kernel_oserror *remove_ticker(void *pw)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   assert(pw != NULL);
 
@@ -896,9 +901,9 @@ static const _kernel_oserror *remove_ticker(void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *enable_hotkey(void)
+static _Optional const _kernel_oserror *enable_hotkey(void)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   if (!grab_enable)
   {
@@ -919,9 +924,9 @@ static const _kernel_oserror *enable_hotkey(void)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *disable_hotkey(void)
+static _Optional const _kernel_oserror *disable_hotkey(void)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   if (grab_enable)
   {
@@ -948,7 +953,7 @@ static void fortify_output(const char *text)
 int event_handler(_kernel_swi_regs *r, void *pw)
 {
   /* (No need to check event number, as CMHG veneer filters events for us) */
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   int claim = EventHandler_PassOn;
 
   assert(r != NULL);
@@ -1067,9 +1072,9 @@ int event_handler(_kernel_swi_regs *r, void *pw)
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *screengrabber_initialise(const char *cmd_tail, int podule_base, void *pw)
+_Optional _kernel_oserror *screengrabber_initialise(const char *cmd_tail, int podule_base, void *pw)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   unsigned int pow = 0, temp;
 
   NOT_USED(cmd_tail);
@@ -1139,14 +1144,14 @@ error:
   if (e != NULL)
     FREE_SAFE(file_path);
 
-  return (_kernel_oserror *)e;
+  return (_Optional _kernel_oserror *)e;
 }
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *screengrabber_finalise(int fatal, int podule, void *pw)
+_Optional _kernel_oserror *screengrabber_finalise(int fatal, int podule, void *pw)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   static bool failed = false;
 
   NOT_USED(fatal);
@@ -1182,7 +1187,7 @@ _kernel_oserror *screengrabber_finalise(int fatal, int podule, void *pw)
 #endif
   }
 
-  return (_kernel_oserror *)e;
+  return (_Optional _kernel_oserror *)e;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -1237,7 +1242,7 @@ static int read_evaluated(const uint8_t *eval)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *evaluate_int( const char *string, int *type, int *value )
+static _Optional const _kernel_oserror *evaluate_int( const char *string, int *type, int *value )
 {
   return _swix( OS_EvaluateExpression,
                 _INR(0,2)|_OUTR(1,2),
@@ -1337,9 +1342,9 @@ static void show_state_filmdelay(void)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *switch_on_or_off( void *value, int index )
+static _Optional const _kernel_oserror *switch_on_or_off( void *value, int index )
 {
-  const _kernel_oserror *e = NULL; /* success */
+  _Optional const _kernel_oserror *e = NULL; /* success */
   const char * const str = value;
 
   NOT_USED( value );
@@ -1387,9 +1392,9 @@ static const _kernel_oserror *switch_on_or_off( void *value, int index )
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *switch_single_or_film( void *value, int index )
+static _Optional const _kernel_oserror *switch_single_or_film( void *value, int index )
 {
-  const _kernel_oserror *e = NULL; /* success */
+  _Optional const _kernel_oserror *e = NULL; /* success */
 
   NOT_USED( value );
 
@@ -1415,9 +1420,9 @@ static const _kernel_oserror *switch_single_or_film( void *value, int index )
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *switch_key_name_or_code( void *value, int index )
+static _Optional const _kernel_oserror *switch_key_name_or_code( void *value, int index )
 {
-  const _kernel_oserror *e = NULL; /* success */
+  _Optional const _kernel_oserror *e = NULL; /* success */
 
   assert( value != NULL );
   if ( index == Arg_KeyName )
@@ -1444,9 +1449,9 @@ static const _kernel_oserror *switch_key_name_or_code( void *value, int index )
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *switch_interval( void *value, int index )
+static _Optional const _kernel_oserror *switch_interval( void *value, int index )
 {
-  const _kernel_oserror *e = NULL; /* success */
+  _Optional const _kernel_oserror *e = NULL; /* success */
   int type, new_delay;
 
   assert( value != NULL );
@@ -1489,9 +1494,9 @@ static const _kernel_oserror *switch_interval( void *value, int index )
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *switch_palette( void *value, int index )
+static _Optional const _kernel_oserror *switch_palette( void *value, int index )
 {
-  const _kernel_oserror *e = NULL; /* success */
+  _Optional const _kernel_oserror *e = NULL; /* success */
 
   NOT_USED( value );
 
@@ -1517,7 +1522,7 @@ static const _kernel_oserror *switch_palette( void *value, int index )
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *switch_new_sprite( void *value, int index )
+static _Optional const _kernel_oserror *switch_new_sprite( void *value, int index )
 {
   NOT_USED( value );
 
@@ -1537,9 +1542,9 @@ static const _kernel_oserror *switch_new_sprite( void *value, int index )
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *switch_filename( void *value, int index )
+static _Optional const _kernel_oserror *switch_filename( void *value, int index )
 {
-  const _kernel_oserror *e = NULL; /* success */
+  _Optional const _kernel_oserror *e = NULL; /* success */
 
   assert( value != NULL );
   /* If called with Arg_END then this is *SGrabFilename not *SGrabConfigure */
@@ -1547,16 +1552,16 @@ static const _kernel_oserror *switch_filename( void *value, int index )
   NOT_USED( index );
 
   assert(file_path != NULL);
-  if ( strcmp( file_path, value ) != 0 )
+  if ( file_path == NULL || strcmp( &*file_path, value ) != 0 )
   {
-    char *dup = strdup( value );
+    _Optional char *dup = strdup( value );
     if ( dup == NULL )
     {
       e = no_mem_error();
     }
     else
     {
-      DEBUGF( "Replacing filename %s with %s\n", file_path, dup );
+      DEBUGF( "Replacing filename %s with %s\n", file_path == NULL ? "" : file_path, dup );
       free( file_path );
       file_path = dup; /* Change base file path */
       shot_num = 0;    /* and reset counter */
@@ -1572,9 +1577,9 @@ static const _kernel_oserror *switch_filename( void *value, int index )
 
 /* ----------------------------------------------------------------------- */
 
-_kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void *pw)
+_Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void *pw)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   void *read_args_buf[80];
 
   assert(arg_string != NULL || argc == 0);
@@ -1603,7 +1608,7 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
   }
   else
   {
-    read_args_buf[0] = NULL;
+    read_args_buf[0] = 0;
   }
 
   if (e == NULL)
@@ -1617,7 +1622,7 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
         { { Arg_On, "on" }, { Arg_Off, "off" }, { Arg_END } }
       },
       {
-        NULL, /* Key name/number already shown by show_state_enabled */
+        0, /* Key name/number already shown by show_state_enabled */
         switch_key_name_or_code, /* Only handles *SGrabConfigure */
         -1, /* Key name/number are configured by *SGrabHotKey */
         { { Arg_KeyName }, { Arg_KeyCode }, { Arg_END } }
@@ -1630,7 +1635,7 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
       },
       {
         show_state_counter, /* Only present for *SGrabStatus */
-        NULL,
+        0,
         -1, /* Must handle *SGrabResetCount separately because of unusual behaviour */
         { { Arg_END } }
       },
@@ -1678,7 +1683,7 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
         puts(MOD_NAME" status:\n---------------------");
         for ( i = 0; e == NULL && i < ARRAY_SIZE(switches); i++ )
         {
-          if ( switches[i].show != NULL )
+          if ( switches[i].show )
             switches[i].show();
         }
         show_background();
@@ -1720,7 +1725,7 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
               else
               {
                 /* Second pass: handle the argument */
-                if ( sw->handler != NULL )
+                if ( sw->handler )
                   e = sw->handler( read_args_buf[index], index );
 
                 break; /* there should be no more arguments in this group */
@@ -1743,10 +1748,10 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
           if ( read_args_buf[0] == NULL )
           {
             /* Command has no parameter, so show the currently configured state */
-            if ( sw->show != NULL )
+            if ( sw->show )
               sw->show();
           }
-          else if ( sw->handler != NULL )
+          else if ( sw->handler )
           {
             unsigned int j;
             bool found = false;
@@ -1776,7 +1781,7 @@ _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void 
         break;
     }
   }
-  return (_kernel_oserror *)e;
+  return (_Optional _kernel_oserror *)e;
 }
 
 /* ----------------------------------------------------------------------- */

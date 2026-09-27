@@ -20,9 +20,11 @@
 #ifndef ConfigFile_h
 #define ConfigFile_h
 
+#include "Optional.h"
+
 #include "kernel.h"
 
-extern const _kernel_oserror *save_config(const char *dest_file);
-extern const _kernel_oserror *load_config(const char *source_file);
+extern _Optional const _kernel_oserror *save_config(const char *dest_file);
+extern _Optional const _kernel_oserror *load_config(const char *source_file);
 
 #endif

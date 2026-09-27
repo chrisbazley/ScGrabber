@@ -22,6 +22,7 @@
    22.09.26 CJB Assert the expected Wimp message type in message handlers.
    26.09.26 CJB Assert the Toolbox event numbers in event handlers.
    26.09.26 CJB Match header name case for host compilation.
+   26.09.26 CJB Annotate nullable pointers with _Optional.
 */
 
 /* ANSI headers */
@@ -52,6 +53,9 @@
 
 /* CBOSLib headers */
 #include "OSFile.h"
+
+/* CBUtilLib headers */
+#include "Optional.h"
 
 /* Local headers */
 #include "FEutils.h"
@@ -127,17 +131,17 @@ static unsigned char stringset_mapping[MaxInternalKeyNumber];
 
 static ToolboxEventHandler radiobutton_event, actionbutton_event, dragended_event, numberrange_event, stringset_event;
 static WimpMessageHandler datasaveack_message;
-static const _kernel_oserror *setup_set_faded(bool use_interval);
+static _Optional const _kernel_oserror *setup_set_faded(bool use_interval);
 static bool setup_get_state(void);
-static const _kernel_oserror *setup_set_state(void);
+static _Optional const _kernel_oserror *setup_set_state(void);
 static void close_msgs_exit(void);
-static const _kernel_oserror *setup_set_name(unsigned int key_code);
+static _Optional const _kernel_oserror *setup_set_name(unsigned int key_code);
 
 /* ----------------------------------------------------------------------- */
 
 void setup_created(ObjectId id)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   static const struct
   {
     int                  event_code;
@@ -187,7 +191,7 @@ void setup_created(ObjectId id)
   if (e == NULL)
   {
     unsigned int k;
-    char *available = NULL;
+    _Optional char *available = NULL;
     size_t av_len = 0, av_size = 0;
 
     /* Ensure that the key names file is closed on exit */
@@ -198,7 +202,7 @@ void setup_created(ObjectId id)
     unsigned int l = 0;
     for (k = 0; k < ARRAY_SIZE(stringset_mapping); k++)
     {
-      const char *key_name;
+      const _Optional char *key_name = NULL;
       static const char *esc_seq[] = {"\\,","\\\\"}; /* multi-character escape sequences */
 
       e = lookup_key_name(k, &key_name);
@@ -213,8 +217,8 @@ void setup_created(ObjectId id)
         continue;
 
       /* Find the buffer size required to inflate the key name string */
-      int len = strinflate(NULL, 0, key_name, ",\\", esc_seq);
-      DEBUGF("String will be inflated from %d to %d bytes\n", strlen(key_name), len);
+      int len = strinflate(NULL, 0, &*key_name, ",\\", esc_seq);
+      DEBUGF("String will be inflated from %d to %d bytes\n", strlen(&*key_name), len);
 
       /* Check that there is enough space in the string buffer for the
          key name and a trailing comma */
@@ -231,7 +235,7 @@ void setup_created(ObjectId id)
           av_size *= BufferGrowthMultiplier; /* geometric growth */
 
         DEBUGF("About to extend string buffer to %u bytes\n", av_size);
-        char *new_av = realloc(available, av_size);
+        _Optional char *new_av = realloc(available, av_size);
         if (new_av == NULL)
         {
           EF(msgs_error(DUMMY_ERRNO, "NoMem"));
@@ -246,7 +250,7 @@ void setup_created(ObjectId id)
       /* Inflate the key name string by replacing characters that would otherwise have a
          special meaning for stringset_set_available with escape sequences. */
       assert(av_size >= av_len);
-      (void)strinflate(available + av_len, av_size - av_len, key_name, ",\\", esc_seq);
+      (void)strinflate(available + av_len, av_size - av_len, &*key_name, ",\\", esc_seq);
 
       //DEBUGF("String set is now: '%s'\n", available);
 
@@ -258,8 +262,11 @@ void setup_created(ObjectId id)
       assert(l < ARRAY_SIZE(stringset_mapping));
       stringset_mapping[l++] = k;
     }
-    available[av_len - 1] = '\0'; /* reinstate nul terminator */
-    EF(stringset_set_available(0, setup_id, ComponentId_KeyName, available));
+    if (available != NULL)
+    {
+      available[av_len - 1] = '\0'; /* reinstate nul terminator */
+      EF(stringset_set_available(0, setup_id, ComponentId_KeyName, &*available));
+    }
     free(available);
   }
   else
@@ -273,7 +280,7 @@ void setup_created(ObjectId id)
 
 /* ----------------------------------------------------------------------- */
 
-const _kernel_oserror *show_setup(void)
+_Optional const _kernel_oserror *show_setup(void)
 {
   ON_ERR_RTN_E(setup_set_state());
 
@@ -287,19 +294,20 @@ const _kernel_oserror *show_setup(void)
 
 /* ----------------------------------------------------------------------- */
 
-const _kernel_oserror *configure_module(void)
+_Optional const _kernel_oserror *configure_module(void)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   DEBUGF("Configuring back-end\n");
 
   /* Find string buffer size required for the configuration command
      (an extra byte will be required for the nul terminator) */
-  int req = make_config_cmd(NULL, 0) + 1;
+  char unused;
+  int req = make_config_cmd(&unused, 0) + 1;
   DEBUGF("%u bytes required for star command\n", req);
 
   /* Allocate a string buffer of appropriate size */
-  char *cmd_buffer = malloc(req);
+  _Optional char *cmd_buffer = malloc(req);
   if (cmd_buffer == NULL)
   {
     e = msgs_error(DUMMY_ERRNO, "NoMem");
@@ -307,10 +315,10 @@ const _kernel_oserror *configure_module(void)
   else
   {
     /* Execute the configuration command */
-    (void)make_config_cmd(cmd_buffer, req);
+    (void)make_config_cmd(&*cmd_buffer, req);
 
     DEBUGF("Executing command '%s'\n", cmd_buffer);
-    if (_kernel_oscli(cmd_buffer) == _kernel_ERROR)
+    if (_kernel_oscli(&*cmd_buffer) == _kernel_ERROR)
       e = _kernel_last_oserror();
 
     /* Deallocate the string buffer */
@@ -329,7 +337,7 @@ static void close_msgs_exit(void)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *setup_set_state(void)
+static _Optional const _kernel_oserror *setup_set_state(void)
 {
   ComponentId radio;
   unsigned int i;
@@ -355,7 +363,7 @@ static const _kernel_oserror *setup_set_state(void)
   ON_ERR_RTN_E(writablefield_set_value(0,
                                        setup_id,
                                        ComponentId_FilePath,
-                                       save_path));
+                                       &*save_path));
 
   /* Set the displayed filming speed */
   switch (repeat_type)
@@ -386,7 +394,7 @@ static const _kernel_oserror *setup_set_state(void)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *setup_set_faded(bool use_interval)
+static _Optional const _kernel_oserror *setup_set_faded(bool use_interval)
 {
   ON_ERR_RTN_E(set_gadget_faded(setup_id,
                                 ComponentId_IntervalLabel,
@@ -397,11 +405,11 @@ static const _kernel_oserror *setup_set_faded(bool use_interval)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *setup_set_name(unsigned int key_code)
+static _Optional const _kernel_oserror *setup_set_name(unsigned int key_code)
 {
-  const char *key_name;
+  const _Optional char *key_name = NULL;
 
-  const _kernel_oserror *e = lookup_key_name(key_code, &key_name);
+  _Optional const _kernel_oserror *e = lookup_key_name(key_code, &key_name);
   if (e != NULL && e->errnum == ErrNum_MessageNotFound)
   {
     DEBUGF("Suppressing error '%s'\n", e->errmess);
@@ -428,11 +436,15 @@ static const _kernel_oserror *setup_set_name(unsigned int key_code)
         unknown_key = false;
       }
 
-      DEBUGF("Displaying key name '%s'\n", key_name);
-      e = stringset_set_selected(0,
-                                 setup_id,
-                                 ComponentId_KeyName,
-                                 (char *)key_name);
+      assert(key_name != NULL);
+      if (key_name != NULL)
+      {
+        DEBUGF("Displaying key name '%s'\n", key_name);
+        e = stringset_set_selected(0,
+                                   setup_id,
+                                   ComponentId_KeyName,
+                                   &*key_name);
+      }
     }
   }
   return e; /* success */
@@ -440,18 +452,21 @@ static const _kernel_oserror *setup_set_name(unsigned int key_code)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *get_file_path(char **new_fname)
+static _Optional const _kernel_oserror *get_file_path(_Optional char **new_fname)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   int new_fname_len;
+  char unused;
 
   assert(new_fname != NULL);
+  if (new_fname == NULL)
+    return msgs_error(DUMMY_ERRNO, "NoMem");
 
   /* Find buffer size required to get the base file path */
   e = writablefield_get_value(0,
                               setup_id,
                               ComponentId_FilePath,
-                              NULL,
+                              &unused,
                               0,
                               &new_fname_len);
   if (e == NULL)
@@ -459,7 +474,7 @@ static const _kernel_oserror *get_file_path(char **new_fname)
     /* Allocate a string buffer of appropriate size */
 
     DEBUGF("%u bytes required for displayed base file path\n", new_fname_len);
-    char *fname = malloc(new_fname_len);
+    _Optional char *fname = malloc(new_fname_len);
     if (fname == NULL)
     {
       e = msgs_error(DUMMY_ERRNO, "NoMem");
@@ -470,12 +485,12 @@ static const _kernel_oserror *get_file_path(char **new_fname)
       e = writablefield_get_value(0,
                                   setup_id,
                                   ComponentId_FilePath,
-                                  fname,
+                                  &*fname,
                                   new_fname_len,
                                   NULL);
       if (e == NULL)
       {
-        *new_fname = fname;
+        *new_fname = &*fname;
         DEBUGF("Displayed base file path is '%s'\n", fname);
       }
       else
@@ -491,11 +506,11 @@ static const _kernel_oserror *get_file_path(char **new_fname)
 
 static bool setup_get_state(void)
 {
-  char *new_fname = NULL;
+  _Optional char *new_fname = NULL;
   int state, len;
   ComponentId selected;
   bool success = false;
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   unsigned int i;
 
   /* Get the new base file path */
@@ -503,8 +518,15 @@ static bool setup_get_state(void)
   if (e != NULL)
     goto error;
 
+  assert(new_fname != NULL);
+  if (new_fname == NULL)
+  {
+    e = msgs_error(DUMMY_ERRNO, "NoMem");
+    goto error;
+  }
+
   /* Check the length of the new leaf name */
-  len = strlen(pathtail(new_fname, 1));
+  len = strlen(pathtail(&*new_fname, 1));
   DEBUGF("Length of leaf name is %d\n", len);
   if (len > 5)
   {
@@ -513,7 +535,7 @@ static bool setup_get_state(void)
       goto error;
   }
 
-  len = strlen(new_fname);
+  len = strlen(&*new_fname);
   DEBUGF("Length of new base file path is %d\n", len);
   if (len < 1)
   {
@@ -618,7 +640,7 @@ static int numberrange_event(int event_code, ToolboxEvent *event, IdBlock *id_bl
  */
 static int stringset_event(int event_code, ToolboxEvent *event, IdBlock *id_block,void *handle)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   int selected;
 
   assert(event_code == StringSet_ValueChanged);
@@ -682,7 +704,7 @@ static int radiobutton_event(int event_code, ToolboxEvent *event, IdBlock *id_bl
  */
 static int actionbutton_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   assert(event_code == ActionButton_Selected);
   assert(event != NULL);
@@ -755,8 +777,8 @@ static int actionbutton_event(int event_code, ToolboxEvent *event, IdBlock *id_b
 static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_block,void *handle)
 {
   const DraggableDragEndedEvent *todde = (DraggableDragEndedEvent *)event;
-  char *new_fname = NULL;
-  const _kernel_oserror *e = NULL;
+  _Optional char *new_fname = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   WimpMessage msg;
   const char *leaf_name;
 
@@ -771,10 +793,11 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
 
   /* Get the new base file path */
   e = get_file_path(&new_fname);
-  if (e == NULL)
+  if (e == NULL && new_fname != NULL)
   {
+    assert(new_fname != NULL);
     /* Copy only the leaf name into the body of the Wimp message */
-    leaf_name = pathtail(new_fname, 1);
+    leaf_name = pathtail(&*new_fname, 1);
     STRCPY_SAFE(msg.data.data_save.leaf_name, leaf_name);
     free(new_fname);
 
