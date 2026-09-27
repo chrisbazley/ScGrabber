@@ -285,8 +285,7 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
 
             assert(config_map[i].type == Type_String);
 
-            /* Find end of string value (first whitespace character)
-               Could use strpbrk here, but this is probably faster. */
+            /* Find end of string value (first whitespace character). */
             for (end = value; *end != '\0'; end++)
             {
               if (isspace((unsigned char)*end))

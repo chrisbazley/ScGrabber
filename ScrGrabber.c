@@ -31,6 +31,8 @@
                 stricmp() instead of transforming the command argument string.
    26.09.26 CJB Annotate nullable pointers with _Optional.
    27.09.26 CJB Express the pound-sign key name as an ASCII escape.
+   27.09.26 CJB Correct screen-mode validation and initialise the OS_ReadArgs
+                output buffer.
 */
 
 #include <stdio.h>
@@ -551,19 +553,19 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
 
   /* Check that the current screen mode is suitable for saving the
      display as a sprite. */
-  if (mode_vars[VarIndex_ModeFlags] & (ModeFlag_NonGraphics |
-                                       ModeFlag_Teletext |
-                                       ModeFlag_LineGap |
-                                       ModeFlag_BBCLineGap) != 0)
+  if ((mode_vars[VarIndex_ModeFlags] & (ModeFlag_NonGraphics |
+                                        ModeFlag_Teletext |
+                                        ModeFlag_LineGap |
+                                        ModeFlag_BBCLineGap)) != 0)
   {
     DEBUGF("Screen mode is unsuitable (flags = %" PRIdPTR ")\n",
            mode_vars[VarIndex_ModeFlags]);
   }
-  else if (mode_vars[VarIndex_Log2BPP] + 1 < SPRITE_TYPE_1BPP &&
+  else if (mode_vars[VarIndex_Log2BPP] + 1 < SPRITE_TYPE_1BPP ||
            mode_vars[VarIndex_Log2BPP] + 1 > SPRITE_TYPE_32BPP)
   {
-    DEBUGF("Screen mode is unsuitable (bpp = %d)\n",
-           1 << mode_vars[VarIndex_Log2BPP]);
+    DEBUGF("Screen mode is unsuitable (log2 bpp = %" PRIdPTR ")\n",
+           mode_vars[VarIndex_Log2BPP]);
   }
   else
   {
@@ -1581,7 +1583,7 @@ static _Optional const _kernel_oserror *switch_filename( void *value, int index 
 _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void *pw)
 {
   _Optional const _kernel_oserror *e = NULL;
-  void *read_args_buf[80];
+  void *read_args_buf[80] = {0};
 
   assert(arg_string != NULL || argc == 0);
   NOT_USED(pw);
@@ -1607,11 +1609,6 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
               read_args_buf,
               sizeof(read_args_buf));
   }
-  else
-  {
-    read_args_buf[0] = 0;
-  }
-
   if (e == NULL)
   {
     static const ArgSwitch switches[] =
