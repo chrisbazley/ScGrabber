@@ -37,6 +37,8 @@
    27.09.26 CJB Use portable types and conversions for host compilation.
    27.09.26 CJB Fully initialise command-switch state entries.
    27.09.26 CJB Declare local variables at their first use.
+   27.09.26 CJB Use designated initializers for sprite headers and offsetof
+                for their serialized extents.
 */
 
 #include <stdio.h>
@@ -44,6 +46,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
@@ -645,33 +648,50 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
       goto error;
     }
 
-    /* Write sprite file header */
-    SpriteAreaHeader area_header;
-    SpriteHeader sprite_header;
+    SpriteAreaHeader area_header =
+    {
+      .sprite_count = 1,
+      .first = offsetof(SpriteAreaHeader, extension_words),
+      .used = offsetof(SpriteAreaHeader, extension_words) +
+              offsetof(SpriteHeader, palette_data) + palette_size +
+              mode_vars[VarIndex_ScreenSize]
+    };
 #ifndef USE_STDIO
     _kernel_osgbpb_block inout;
 #endif
-    area_header.sprite_count = 1;
-    area_header.first = sizeof(area_header);
-    area_header.used = sizeof(area_header) + sizeof(sprite_header) +
-                       palette_size + mode_vars[VarIndex_ScreenSize];
 
     /* Write the sprite area header to the output file
        (not including the area size, which isn't required) */
     DEBUGF("Writing sprite file header (%zu bytes)\n",
-           sizeof(area_header) - sizeof(area_header.size));
+           offsetof(SpriteAreaHeader, extension_words) -
+             offsetof(SpriteAreaHeader, sprite_count));
 
     if (!FWRITE(&area_header.sprite_count,
-                sizeof(area_header) - sizeof(area_header.size),
+                offsetof(SpriteAreaHeader, extension_words) -
+                  offsetof(SpriteAreaHeader, sprite_count),
                 out))
     {
       e = _kernel_last_oserror();
       goto error;
     }
 
-    /* Write sprite header */
-    sprite_header.size = sizeof(sprite_header) + palette_size +
-                         mode_vars[VarIndex_ScreenSize];
+    /* Last bit used (0-31) is the remainder from dividing one less than
+       bits-per-line by bits-per-word (latter is fixed as 32). This determines
+       the amount of right hand wastage for each row. */
+    SpriteHeader sprite_header =
+    {
+      .size = offsetof(SpriteHeader, palette_data) + palette_size +
+              mode_vars[VarIndex_ScreenSize],
+      .width = ((unsigned)mode_vars[VarIndex_LineLength] + 3) / 4 - 1,
+      .height = mode_vars[VarIndex_YWindLimit],
+      .left_bit = 0, /* Left-hand wastage is deprecated */
+      .right_bit = SPRITE_RIGHT_BIT_LOG2(
+                     (unsigned)mode_vars[VarIndex_XWindLimit] + 1,
+                     mode_vars[VarIndex_Log2BPP]),
+      .image = offsetof(SpriteHeader, palette_data) + palette_size,
+      .mask = offsetof(SpriteHeader, palette_data) + palette_size
+              /* Sprite has no mask */
+    };
 
     /* Sprite name only requires a NUL terminator if less than maximum length */
     strncpy(sprite_header.name,
@@ -685,20 +705,6 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     {
       sprite_header.name[i] = tolower(sprite_header.name[i]);
     }
-
-    sprite_header.height = mode_vars[VarIndex_YWindLimit];
-    sprite_header.width = ((unsigned)mode_vars[VarIndex_LineLength] + 3) / 4 -
-                          1;
-    sprite_header.left_bit = 0; /* Left-hand wastage is deprecated */
-
-    /* Last bit used (0-31) is the remainder from dividing one less than
-      bits-per-line by bits-per-word (latter is fixed as 32). This determines
-      the amount of right hand wastage for each row. */
-    sprite_header.right_bit = SPRITE_RIGHT_BIT_LOG2(
-                                (unsigned)mode_vars[VarIndex_XWindLimit] + 1,
-                                mode_vars[VarIndex_Log2BPP]);
-    sprite_header.image = sizeof(sprite_header) + palette_size;
-    sprite_header.mask = sprite_header.image; /* Sprite will never have mask */
 
     /* This must be unsigned because it might be a top-bit-set address. */
     unsigned int screen_mode;
@@ -784,8 +790,9 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     DEBUGF("Sprite type is 0x%x\n", sprite_header.type);
 
     /* Write the sprite header to the output file */
-    DEBUGF("Writing sprite header (%zu bytes)\n", sizeof(sprite_header));
-    if (!FWRITE(&sprite_header, sizeof(sprite_header), out))
+    DEBUGF("Writing sprite header (%zu bytes)\n",
+           offsetof(SpriteHeader, palette_data));
+    if (!FWRITE(&sprite_header, offsetof(SpriteHeader, palette_data), out))
     {
       e = _kernel_last_oserror();
       goto error;
