@@ -21,6 +21,7 @@
    21.10.09 CJB Updated to use additional MessageTrans SWI veneers.
    26.09.26 CJB Match header name case for host compilation.
    26.09.26 CJB Annotate nullable pointers with _Optional.
+   27.09.26 CJB Use the correct format specifier for a buffer size.
 */
 
 /* ANSI headers */
@@ -126,7 +127,7 @@ _Optional const _kernel_oserror *open_key_msgs(void)
       if (e == NULL)
       {
         /* Allocate buffer for the message file */
-        DEBUGF("Allocating %u bytes for key names file\n", size);
+        DEBUGF("Allocating %zu bytes for key names file\n", size);
         key_msgs_file = malloc(size);
         if (key_msgs_file == NULL)
         {

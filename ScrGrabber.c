@@ -34,6 +34,7 @@
    27.09.26 CJB Correct screen-mode validation and initialise the OS_ReadArgs
                 output buffer.
    27.09.26 CJB Make debug output format-safe.
+   27.09.26 CJB Use portable types and conversions for host compilation.
 */
 
 #include <stdio.h>
@@ -704,14 +705,15 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     if (os_version < MinOSVersion)
     {
       /* Fall-back code for RISC OS 3.1 (doesn't support SWI OS_ScreenMode) */
-      screen_mode = _kernel_osbyte(OSByte_ReadCharAndMode, 0, 0);
-      if (screen_mode == _kernel_ERROR)
+      int const result = _kernel_osbyte(OSByte_ReadCharAndMode, 0, 0);
+      if (result == _kernel_ERROR)
       {
         e = _kernel_last_oserror();
         goto error;
       }
       /* The mode number is returned in R2 */
-      screen_mode = (screen_mode & OSByteR2ResultMask) >> OSByteR2ResultShift;
+      screen_mode = ((unsigned int)result & OSByteR2ResultMask) >>
+                    OSByteR2ResultShift;
     }
     else
 #endif
@@ -815,7 +817,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     fclose(out);
     out = NULL;
 #else
-    _kernel_osfind(0, (char *)out);
+    _kernel_osfind(0, (void *)(intptr_t)out);
     out = 0;
 #endif
 
@@ -831,7 +833,7 @@ error:
     fclose(out);
 #else
   if (out != 0)
-    _kernel_osfind(0, (char *)out);
+    _kernel_osfind(0, (void *)(intptr_t)out);
 #endif
 
   return e;
@@ -1199,7 +1201,7 @@ _Optional _kernel_oserror *screengrabber_finalise(int fatal, int podule, void *p
 static int key_name_to_num(const char *key_name)
 {
   /* Returns the internal key number matching the specified key name */
-  int i, key_code = -1;
+  int key_code = -1;
 
   assert(key_name != NULL);
   if (stricmp("~", key_name) == 0)
@@ -1208,11 +1210,12 @@ static int key_name_to_num(const char *key_name)
   }
   else
   {
-    for (i = 0; i < ARRAY_SIZE(key_names); i++)
+    for (size_t i = 0; i < ARRAY_SIZE(key_names); i++)
     {
       if (stricmp(key_names[i], key_name) == 0)
       {
-        key_code = i;
+        assert(i <= INT_MAX);
+        key_code = (int)i;
         break;
       }
     }

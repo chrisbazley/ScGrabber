@@ -23,6 +23,7 @@
    26.09.26 CJB Assert the Toolbox event numbers in event handlers.
    26.09.26 CJB Match header name case for host compilation.
    26.09.26 CJB Annotate nullable pointers with _Optional.
+   27.09.26 CJB Use size-appropriate types and format specifiers.
 */
 
 /* ANSI headers */
@@ -31,6 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 /* RISC OS headers */
 #include "kernel.h"
@@ -217,13 +219,14 @@ void setup_created(ObjectId id)
         continue;
 
       /* Find the buffer size required to inflate the key name string */
-      int len = strinflate(NULL, 0, &*key_name, ",\\", esc_seq);
-      DEBUGF("String will be inflated from %d to %d bytes\n", strlen(&*key_name), len);
+      size_t len = strinflate(NULL, 0, &*key_name, ",\\", esc_seq);
+      DEBUGF("String will be inflated from %zu to %zu bytes\n",
+             strlen(&*key_name), len);
 
       /* Check that there is enough space in the string buffer for the
          key name and a trailing comma */
       size_t new_size = av_len + len + 1;
-      DEBUGF("Required buffer length will be %d bytes\n", new_size);
+      DEBUGF("Required buffer length will be %zu bytes\n", new_size);
       if (new_size > av_size)
       {
         /* Extend the string buffer to accommodate more key names */
@@ -234,7 +237,7 @@ void setup_created(ObjectId id)
         while (new_size > av_size)
           av_size *= BufferGrowthMultiplier; /* geometric growth */
 
-        DEBUGF("About to extend string buffer to %u bytes\n", av_size);
+        DEBUGF("About to extend string buffer to %zu bytes\n", av_size);
         _Optional char *new_av = realloc(available, av_size);
         if (new_av == NULL)
         {
@@ -260,7 +263,8 @@ void setup_created(ObjectId id)
       /* Record the internal key number corresponding to this member of the
          string set. */
       assert(l < ARRAY_SIZE(stringset_mapping));
-      stringset_mapping[l++] = k;
+      assert(k <= UCHAR_MAX);
+      stringset_mapping[l++] = (unsigned char)k;
     }
     if (available != NULL)
     {
@@ -304,7 +308,7 @@ _Optional const _kernel_oserror *configure_module(void)
      (an extra byte will be required for the nul terminator) */
   char unused;
   int req = make_config_cmd(&unused, 0) + 1;
-  DEBUGF("%u bytes required for star command\n", req);
+  DEBUGF("%d bytes required for star command\n", req);
 
   /* Allocate a string buffer of appropriate size */
   _Optional char *cmd_buffer = malloc(req);
@@ -473,7 +477,7 @@ static _Optional const _kernel_oserror *get_file_path(_Optional char **new_fname
   {
     /* Allocate a string buffer of appropriate size */
 
-    DEBUGF("%u bytes required for displayed base file path\n", new_fname_len);
+    DEBUGF("%d bytes required for displayed base file path\n", new_fname_len);
     _Optional char *fname = malloc(new_fname_len);
     if (fname == NULL)
     {
@@ -507,7 +511,8 @@ static _Optional const _kernel_oserror *get_file_path(_Optional char **new_fname
 static bool setup_get_state(void)
 {
   _Optional char *new_fname = NULL;
-  int state, len;
+  int state;
+  size_t len;
   ComponentId selected;
   bool success = false;
   _Optional const _kernel_oserror *e = NULL;
@@ -527,7 +532,7 @@ static bool setup_get_state(void)
 
   /* Check the length of the new leaf name */
   len = strlen(pathtail(&*new_fname, 1));
-  DEBUGF("Length of leaf name is %d\n", len);
+  DEBUGF("Length of leaf name is %zu\n", len);
   if (len > 5)
   {
     /* Leaf name may be too long for old filing systems */
@@ -536,7 +541,7 @@ static bool setup_get_state(void)
   }
 
   len = strlen(&*new_fname);
-  DEBUGF("Length of new base file path is %d\n", len);
+  DEBUGF("Length of new base file path is %zu\n", len);
   if (len < 1)
   {
     /* File path is too short (*SGrabFilename requires a parameter) */
@@ -661,7 +666,7 @@ static int stringset_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   if (e == NULL)
   {
     /* Update the key number displayed by the adjacent number range gadget */
-    assert(selected < ARRAY_SIZE(stringset_mapping));
+    assert(selected >= 0 && (size_t)selected < ARRAY_SIZE(stringset_mapping));
     e = numberrange_set_value(0,
                               setup_id,
                               ComponentId_KeyNumber,
