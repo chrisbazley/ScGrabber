@@ -26,6 +26,8 @@
    27.09.26 CJB Use size-appropriate types and format specifiers.
    27.09.26 CJB Keep assertion-only event codes used in release builds.
    27.09.26 CJB Declare local variables at their first use.
+   27.09.26 CJB Use a designated initializer for the outgoing DataSave
+                message.
 */
 
 /* ANSI headers */
@@ -798,7 +800,27 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
   e = get_file_path(&new_fname);
   if (e == NULL && new_fname != NULL)
   {
-    WimpMessage msg;
+    WimpMessage msg =
+    {
+      .hdr =
+      {
+        .size = sizeof(msg),
+        .your_ref = 0,
+        .action_code = Wimp_MDataSave
+      },
+      .data =
+      {
+        .data_save =
+        {
+          .destination_window = todde->window_handle,
+          .destination_icon = todde->icon_handle,
+          .destination_x = todde->x,
+          .destination_y = todde->y,
+          .estimated_size = 0,
+          .file_type = FileType_Sprite
+        }
+      }
+    };
     assert(new_fname != NULL);
     /* Copy only the leaf name into the body of the Wimp message */
     const char *leaf_name = pathtail(&*new_fname, 1);
@@ -806,15 +828,6 @@ static int dragended_event(int event_code, ToolboxEvent *event, IdBlock *id_bloc
     free(new_fname);
 
     /* Send a DataSave message to ask for full path from Filer window */
-    msg.hdr.size = sizeof(msg);
-    msg.hdr.your_ref = 0;
-    msg.hdr.action_code = Wimp_MDataSave;
-    msg.data.data_save.destination_window = todde->window_handle;
-    msg.data.data_save.destination_icon = todde->icon_handle;
-    msg.data.data_save.destination_x = todde->x;
-    msg.data.data_save.destination_y = todde->y;
-    msg.data.data_save.estimated_size = 0;
-    msg.data.data_save.file_type = FileType_Sprite;
     e = wimp_send_message(Wimp_EUserMessage,
                           &msg,
                           todde->window_handle,
