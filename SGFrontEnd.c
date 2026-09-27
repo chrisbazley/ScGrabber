@@ -37,6 +37,7 @@
    26.09.26 CJB Assert the Toolbox event numbers in event handlers.
    26.09.26 CJB Use portable header names and allow host compilation.
    26.09.26 CJB Annotate nullable pointers with _Optional.
+   27.09.26 CJB Make Fortify debug output format-safe.
 */
 
 /* ISO C library headers */
@@ -148,7 +149,7 @@ unsigned int key_code = 13; /* Internal key number */
 #ifdef FORTIFY
 static void fortify_output(const char *text)
 {
-  DEBUGF(text);
+  DEBUGF("%s", text);
 }
 #endif /* FORTIFY */
 

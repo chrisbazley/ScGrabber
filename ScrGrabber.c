@@ -33,6 +33,7 @@
    27.09.26 CJB Express the pound-sign key name as an ASCII escape.
    27.09.26 CJB Correct screen-mode validation and initialise the OS_ReadArgs
                 output buffer.
+   27.09.26 CJB Make debug output format-safe.
 */
 
 #include <stdio.h>
@@ -474,7 +475,7 @@ static _Optional const _kernel_oserror *check_disp_bank(void *pw)
     }
     else
     {
-      DEBUGF("Adding callback to routine %p\n", callback_veneer);
+      DEBUGF("Adding callback\n");
       callback_pending = true;
       e = _swix(OS_AddCallBack, _INR(0,1), callback_veneer, pw);
       if (e != NULL)
@@ -947,7 +948,7 @@ static _Optional const _kernel_oserror *disable_hotkey(void)
 #ifdef FORTIFY
 static void fortify_output(const char *text)
 {
-  DEBUGF(text);
+  DEBUGF("%s", text);
 }
 #endif
 
@@ -1039,8 +1040,8 @@ int event_handler(_kernel_swi_regs *r, void *pw)
               else
                 freq = interval;
 
-              DEBUGF("Registering ticker event routine %p with frequency %d\n",
-                     ticker_veneer, freq);
+              DEBUGF("Registering ticker event routine with frequency %d\n",
+                     freq);
 
               ticker_running = true;
               e = _swix(OS_CallEvery, _INR(0,2), freq - 1, &ticker_veneer, pw);
@@ -1239,7 +1240,8 @@ static int read_evaluated(const uint8_t *eval)
   {
     value = 0;
   }
-  DEBUGF("Decoded evaluated argument at %p as %d\n", eval, value);
+  DEBUGF("Decoded evaluated argument at %p as %d\n",
+         (const void *)eval, value);
   return value;
 }
 
