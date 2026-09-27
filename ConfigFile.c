@@ -21,6 +21,7 @@
    26.09.26 CJB Match header name case for host compilation.
    26.09.26 CJB Annotate nullable pointers with _Optional.
    26.09.26 CJB Pass unsigned characters to isspace.
+   27.09.26 CJB Use the correct type for strtoul's end pointer.
 */
 
 /* ANSI headers */
@@ -214,8 +215,6 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
   else
   {
     /* Calculate the length of the prefix in the input line */
-    const char *end;
-
     assert(colon > line);
     unsigned int name_len = colon - line;
     DEBUGF("Length of input line prefix is %d\n", name_len);
@@ -245,69 +244,81 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
       switch (config_map[i].type)
       {
         case Type_Boolean:
-          input = strtoul(value, (char **)&end, 10);
-          if (*end == '\n')
           {
-            *(bool *)config_map[i].value = (input != 0);
-            DEBUGF("Got boolean value %s\n", (input != 0) ? "true" : "false");
-          }
-          else
-          {
-            DEBUGF("Boolean value has trailing junk: '%s'\n", end);
-            mistake = true;
+            char *end;
+
+            input = strtoul(value, &end, 10);
+            if (*end == '\n')
+            {
+              *(bool *)config_map[i].value = (input != 0);
+              DEBUGF("Got boolean value %s\n", (input != 0) ? "true" : "false");
+            }
+            else
+            {
+              DEBUGF("Boolean value has trailing junk: '%s'\n", end);
+              mistake = true;
+            }
           }
           break;
 
         case Type_Integer:
-          input = strtoul(value, (char **)&end, 10);
-          if (*end == '\n')
           {
-            *(int *)config_map[i].value = (int)input;
-            DEBUGF("Got integer value %u\n", input);
-          }
-          else
-          {
-            DEBUGF("Integer value has trailing junk: '%s'\n", end);
-            mistake = true;
+            char *end;
+
+            input = strtoul(value, &end, 10);
+            if (*end == '\n')
+            {
+              *(int *)config_map[i].value = (int)input;
+              DEBUGF("Got integer value %u\n", input);
+            }
+            else
+            {
+              DEBUGF("Integer value has trailing junk: '%s'\n", end);
+              mistake = true;
+            }
           }
           break;
 
         default:
-          assert(config_map[i].type == Type_String);
+          {
+            const char *end;
 
-          /* Find end of string value (first whitespace character)
-             Could use strpbrk here, but this is probably faster. */
-          for (end = value; *end != '\0'; end++)
-          {
-            if (isspace((unsigned char)*end))
-              break;
-          }
-          if (*end == '\n')
-          {
-            /* Allocate a buffer large enough for the string value and nul
-               terminator */
-            _Optional char *new_string = malloc(end - value + 1);
-            if (new_string == NULL)
+            assert(config_map[i].type == Type_String);
+
+            /* Find end of string value (first whitespace character)
+               Could use strpbrk here, but this is probably faster. */
+            for (end = value; *end != '\0'; end++)
             {
-              /* Insufficient free memory for string buffer */
-              e = msgs_error(DUMMY_ERRNO, "NoMem");
+              if (isspace((unsigned char)*end))
+                break;
+            }
+            if (*end == '\n')
+            {
+              /* Allocate a buffer large enough for the string value and nul
+                 terminator */
+              _Optional char *new_string = malloc(end - value + 1);
+              if (new_string == NULL)
+              {
+                /* Insufficient free memory for string buffer */
+                e = msgs_error(DUMMY_ERRNO, "NoMem");
+              }
+              else
+              {
+                /* Copy new string value into the buffer */
+                strncpy(&*new_string, value, end - value);
+                new_string[end - value] = '\0';
+                DEBUGF("Got string value '%s'\n", new_string);
+
+                /* Replace existing string value */
+                free(*(char **)config_map[i].value);
+                *(char **)config_map[i].value = &*new_string;
+              }
             }
             else
             {
-              /* Copy new string value into the buffer */
-              strncpy(&*new_string, value, end - value);
-              new_string[end - value] = '\0';
-              DEBUGF("Got string value '%s'\n", new_string);
-
-              /* Replace existing string value */
-              free(*(char **)config_map[i].value);
-              *(char **)config_map[i].value = &*new_string;
+              DEBUGF("String value has trailing junk: '%s'\n", end);
+              mistake = true;
             }
-          }
-          else
-          {
-            DEBUGF("String value has trailing junk: '%s'\n", end);
-            mistake = true;
           }
           break;
       }
