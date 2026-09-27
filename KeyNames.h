@@ -20,10 +20,12 @@
 #ifndef KeyNames_h
 #define KeyNames_h
 
+#include "Optional.h"
+
 #include "kernel.h"
 
-extern const _kernel_oserror *close_key_msgs(void);
-extern const _kernel_oserror *open_key_msgs(void);
-extern const _kernel_oserror *lookup_key_name(unsigned int key_code, const char **key_name);
+extern _Optional const _kernel_oserror *close_key_msgs(void);
+extern _Optional const _kernel_oserror *open_key_msgs(void);
+extern _Optional const _kernel_oserror *lookup_key_name(unsigned int key_code, const _Optional char **key_name);
 
 #endif

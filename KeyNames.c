@@ -20,6 +20,7 @@
 /* 03.09.09 CJB Adapted from existing code for Star Fighter 3000.
    21.10.09 CJB Updated to use additional MessageTrans SWI veneers.
    26.09.26 CJB Match header name case for host compilation.
+   26.09.26 CJB Annotate nullable pointers with _Optional.
 */
 
 /* ANSI headers */
@@ -37,6 +38,9 @@
 #include "msgtrans.h"
 #include "MessTrans.h"
 #include "Debug.h"
+
+/* CBUtilLib headers */
+#include "Optional.h"
 
 /* Local headers */
 #include "KeyNames.h"
@@ -61,13 +65,13 @@ enum
 };
 
 static MessagesFD key_msgs_desc;
-static void *key_msgs_file;
+static _Optional void *key_msgs_file;
 
 /* ----------------------------------------------------------------------- */
 
-const _kernel_oserror *close_key_msgs(void)
+_Optional const _kernel_oserror *close_key_msgs(void)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   if (key_msgs_file != NULL)
   {
@@ -82,9 +86,9 @@ const _kernel_oserror *close_key_msgs(void)
 
 /* ----------------------------------------------------------------------- */
 
-const _kernel_oserror *open_key_msgs(void)
+_Optional const _kernel_oserror *open_key_msgs(void)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   /* If the key names file is already open then there is nothing to do */
   if (key_msgs_file == NULL)
@@ -159,12 +163,12 @@ const _kernel_oserror *open_key_msgs(void)
 
 /* ----------------------------------------------------------------------- */
 
-const _kernel_oserror *lookup_key_name(unsigned int key_code,
-                                       const char **key_name)
+_Optional const _kernel_oserror *lookup_key_name(unsigned int key_code,
+                                       const _Optional char **key_name)
 {
   static char key_name_buf[MaxKeyNameLen + 1];
   char token[MaxKeyTokenLen + 1];
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   assert(key_name != NULL);
 

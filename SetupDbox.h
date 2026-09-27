@@ -20,13 +20,15 @@
 #ifndef SetupDbox_h
 #define SetupDbox_h
 
+#include "Optional.h"
+
 #include "kernel.h"
 #include "toolbox.h"
 
 extern void setup_created(ObjectId id);
 
-extern const _kernel_oserror *show_setup(void);
+extern _Optional const _kernel_oserror *show_setup(void);
 
-extern const _kernel_oserror *configure_module(void);
+extern _Optional const _kernel_oserror *configure_module(void);
 
 #endif

@@ -19,6 +19,8 @@
 
 /* 03.09.09 CJB Moved this code to a separate source file of its own.
    26.09.26 CJB Match header name case for host compilation.
+   26.09.26 CJB Annotate nullable pointers with _Optional.
+   26.09.26 CJB Pass unsigned characters to isspace.
 */
 
 /* ANSI headers */
@@ -39,6 +41,9 @@
 #include "Macros.h"
 #include "Debug.h"
 
+/* CBUtilLib headers */
+#include "Optional.h"
+
 /* Local headers */
 #include "SGFrontEnd.h"
 #include "ConfigFile.h"
@@ -47,7 +52,7 @@
 #include "fortify.h"
 #endif
 
-static char *repeat_type_str = NULL;
+static _Optional char *repeat_type_str = NULL;
 
 static const struct
 {
@@ -107,15 +112,15 @@ config_map[] =
 
 /* ----------------------------------------------------------------------- */
 
-const _kernel_oserror *save_config(const char *dest_file)
+_Optional const _kernel_oserror *save_config(const char *dest_file)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   assert(dest_file != NULL);
 
   _kernel_last_oserror(); /* clear any previous OS error */
 
-  FILE *f = fopen(dest_file, "w"); /* open text file for writing */
+  _Optional FILE *f = fopen(dest_file, "w"); /* open text file for writing */
   if (f == NULL)
   {
     e = _kernel_last_oserror();
@@ -150,14 +155,14 @@ const _kernel_oserror *save_config(const char *dest_file)
       switch (config_map[i].type)
       {
         case Type_Boolean:
-          chars_out = fprintf(f,
+          chars_out = fprintf(&*f,
                               "%s:%d\n",
                               config_map[i].name,
                               *(bool *)config_map[i].value ? 1 : 0);
           break;
 
         case Type_Integer:
-          chars_out = fprintf(f,
+          chars_out = fprintf(&*f,
                               "%s:%u\n",
                               config_map[i].name,
                               *(int *)config_map[i].value);
@@ -165,7 +170,7 @@ const _kernel_oserror *save_config(const char *dest_file)
 
         default:
           assert(config_map[i].type == Type_String);
-          chars_out = fprintf(f,
+          chars_out = fprintf(&*f,
                               "%s:%s\n",
                               config_map[i].name,
                               *(char **)config_map[i].value);
@@ -179,7 +184,7 @@ const _kernel_oserror *save_config(const char *dest_file)
           e = msgs_error_subn(DUMMY_ERRNO, "WriteFail", 1, dest_file);
       }
     }
-    fclose(f);
+    fclose(&*f);
   }
 
   return e;
@@ -187,10 +192,10 @@ const _kernel_oserror *save_config(const char *dest_file)
 
 /* ----------------------------------------------------------------------- */
 
-static const _kernel_oserror *interpret_line(const char *line, const char *source_file, unsigned int line_num)
+static _Optional const _kernel_oserror *interpret_line(const char *line, const char *source_file, unsigned int line_num)
 {
   bool mistake = false;
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
   unsigned int i;
 
   assert(line != NULL);
@@ -200,7 +205,7 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
   repeat_type_str = NULL;
 
   /* Find the end of the variable name */
-  char *colon = strchr(line, ':');
+  _Optional char *colon = strchr(line, ':');
   if (colon == NULL)
   {
     DEBUGF("No colon in input line '%s'\n", line);
@@ -274,14 +279,14 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
              Could use strpbrk here, but this is probably faster. */
           for (end = value; *end != '\0'; end++)
           {
-            if (isspace(*end))
+            if (isspace((unsigned char)*end))
               break;
           }
           if (*end == '\n')
           {
             /* Allocate a buffer large enough for the string value and nul
                terminator */
-            char *new_string = malloc(end - value + 1);
+            _Optional char *new_string = malloc(end - value + 1);
             if (new_string == NULL)
             {
               /* Insufficient free memory for string buffer */
@@ -290,13 +295,13 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
             else
             {
               /* Copy new string value into the buffer */
-              strncpy(new_string, value, end - value);
+              strncpy(&*new_string, value, end - value);
               new_string[end - value] = '\0';
               DEBUGF("Got string value '%s'\n", new_string);
 
               /* Replace existing string value */
               free(*(char **)config_map[i].value);
-              *(char **)config_map[i].value = new_string;
+              *(char **)config_map[i].value = &*new_string;
             }
           }
           else
@@ -318,15 +323,15 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
      check whether a temporary string was allocated for that purpose. */
   if (repeat_type_str != NULL)
   {
-    if (strcmp(repeat_type_str, "half") == 0)
+    if (strcmp(&*repeat_type_str, "half") == 0)
     {
       repeat_type = RepeatType_HalfSync;
     }
-    else if (strcmp(repeat_type_str, "auto") == 0)
+    else if (strcmp(&*repeat_type_str, "auto") == 0)
     {
       repeat_type = RepeatType_AutoSync;
     }
-    else if (strcmp(repeat_type_str, "timed") == 0)
+    else if (strcmp(&*repeat_type_str, "timed") == 0)
     {
       repeat_type = RepeatType_Interval;
     }
@@ -350,15 +355,15 @@ static const _kernel_oserror *interpret_line(const char *line, const char *sourc
 
 /* ----------------------------------------------------------------------- */
 
-const _kernel_oserror *load_config(const char *source_file)
+_Optional const _kernel_oserror *load_config(const char *source_file)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   assert(source_file != NULL);
 
   _kernel_last_oserror(); /* clear any previous OS error */
 
-  FILE *f = fopen(source_file, "r"); /* open text file for reading */
+  _Optional FILE *f = fopen(source_file, "r"); /* open text file for reading */
   if (f == NULL)
   {
     e = _kernel_last_oserror();
@@ -375,7 +380,7 @@ const _kernel_oserror *load_config(const char *source_file)
       int c;
 
       /* Read as much of the next line as will fit in our string buffer */
-      char *got = fgets(read_line, sizeof(read_line), f);
+      _Optional char *got = fgets(read_line, sizeof(read_line), &*f);
       if (got == NULL)
       {
         /* Read error or end-of-file */
@@ -387,7 +392,7 @@ const _kernel_oserror *load_config(const char *source_file)
         continue;
 
       /* Check for buffer overflow */
-      if (strlen(got) == sizeof(read_line) - 1)
+      if (strlen(&*got) == sizeof(read_line) - 1)
       {
         (void)sprintf(read_line, "%u", line);
         e = msgs_error_subn(DUMMY_ERRNO, "TooLong", 2, read_line, source_file);
@@ -395,9 +400,9 @@ const _kernel_oserror *load_config(const char *source_file)
       }
 
       /* Find the index of the last non-whitespace character */
-      for (c = strlen(got) - 1; c >= 0; c--)
+      for (c = strlen(&*got) - 1; c >= 0; c--)
       {
-        if (!isspace(got[c]))
+        if (!isspace((unsigned char)got[c]))
           break;
       }
       if (c < 0)
@@ -410,10 +415,10 @@ const _kernel_oserror *load_config(const char *source_file)
         got[c + 1] = '\n';
         got[c + 2] = '\0';
       }
-      e = interpret_line(got, source_file, line);
+      e = interpret_line(&*got, source_file, line);
     }
 
-    fclose(f);
+    fclose(&*f);
   }
 
   return e;

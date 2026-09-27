@@ -36,6 +36,7 @@
    22.09.26 CJB Assert the expected Wimp message type in message handlers.
    26.09.26 CJB Assert the Toolbox event numbers in event handlers.
    26.09.26 CJB Use portable header names and allow host compilation.
+   26.09.26 CJB Annotate nullable pointers with _Optional.
 */
 
 /* ISO C library headers */
@@ -67,6 +68,9 @@
 #include "FileUtils.h"
 #include "Debug.h"
 #include "TaskMan.h"
+
+/* CBUtilLib headers */
+#include "Optional.h"
 
 /* Local headers */
 #include "FEutils.h"
@@ -130,7 +134,7 @@ char task_name[MaxTaskNameLen + 1];
 
 /* Current configuration (hopefully the same as the module but not guaranteed)
  */
-char *save_path = NULL; /* Base filename for screenshots */
+_Optional char *save_path = NULL; /* Base filename for screenshots */
 bool grab_enable = true; /* Is hotkey enabled? */
 bool force_film = false; /* If true then a single press starts filming */
 bool save_palette = true; /* Should the palette be saved with screenshots? */
@@ -156,7 +160,7 @@ static bool may_kill_shared_module(const char *find_name)
   intptr_t context = 0;
   TaskManagerTaskInfo buffer;
   int num_found = 0;
-  _kernel_oserror *e = NULL;
+  _Optional _kernel_oserror *e = NULL;
 
   assert(find_name != NULL);
 
@@ -182,11 +186,12 @@ static bool may_kill_shared_module(const char *find_name)
 
 /* ----------------------------------------------------------------------- */
 
-static void simple_exit(const _kernel_oserror *e)
+static void simple_exit(_Optional const _kernel_oserror *e)
 {
   /* Limited amount we can do with no messages file... */
   assert(e != NULL);
-  wimp_report_error((_kernel_oserror *)e, Wimp_ReportError_Cancel, APP_NAME);
+  if (e != NULL)
+    wimp_report_error((_kernel_oserror *)&*e, Wimp_ReportError_Cancel, APP_NAME);
   exit(EXIT_FAILURE);
 }
 
@@ -228,7 +233,7 @@ static int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
  */
 static int misc_event_handler(int event_code, ToolboxEvent *event, IdBlock *id_block,void *handle)
 {
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   NOT_USED(event);
   NOT_USED(id_block);
@@ -268,9 +273,9 @@ static int misc_event_handler(int event_code, ToolboxEvent *event, IdBlock *id_b
 static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   SaveAsSaveToFileEvent *sastfe = (SaveAsSaveToFileEvent *) event;
-  FILE *f; /* output file handle */
+  _Optional FILE *f; /* output file handle */
   int chars_out; /* no. of characters transmitted by fprintf() */
-  const _kernel_oserror *e = NULL;
+  _Optional const _kernel_oserror *e = NULL;
 
   assert(event_code == SaveAs_SaveToFile);
   assert(event != NULL);
@@ -279,10 +284,11 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
 
   /* Find buffer size required for the configuration command
      (an extra byte will be required for the nul terminator) */
-  int req = make_config_cmd(NULL, 0) + 1;
+  char unused;
+  int req = make_config_cmd(&unused, 0) + 1;
 
   /* Allocate a buffer for the configuration command */
-  char *cmd_buffer = malloc(req);
+  _Optional char *cmd_buffer = malloc(req);
   if (cmd_buffer == NULL)
   {
     e = msgs_error(DUMMY_ERRNO, "NoMem");
@@ -290,7 +296,7 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
   else
   {
     /* Synthesise the configuration command */
-    (void)make_config_cmd(cmd_buffer, req);
+    (void)make_config_cmd(&*cmd_buffer, req);
 
     _kernel_last_oserror(); /* clear any previous OS error */
 
@@ -303,13 +309,13 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
     }
     else
     {
-      chars_out = fprintf(f,
+      chars_out = fprintf(&*f,
                           "| This file was generated automatically by the "
                             APP_NAME" application\n");
 
       if (chars_out > 0)
       {
-        chars_out = fprintf(f,
+        chars_out = fprintf(&*f,
                             "RMEnsure "Module_Title" "Module_VersionString" "
                               "If \"<"APP_NAME"$Dir>\" <> \"\" Then "
                               "RMLoad <"APP_NAME"$Dir>.ScrGrabber Else Error "
@@ -317,9 +323,9 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
       }
 
       if (chars_out > 0)
-        chars_out = fprintf(f, "%s\n", cmd_buffer);
+        chars_out = fprintf(&*f, "%s\n", cmd_buffer);
 
-      fclose(f);
+      fclose(&*f);
 
       if (chars_out <= 0)
       {
@@ -406,7 +412,7 @@ static void initialise()
 
   int    toolbox_events = 0,
          wimp_messages = 0;
-  const _kernel_oserror *e;
+  _Optional const _kernel_oserror *e;
 
 #ifdef ACORN_C
   DEBUG_SET_OUTPUT(DebugOutput_Reporter, APP_NAME);

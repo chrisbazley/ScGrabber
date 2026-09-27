@@ -86,7 +86,7 @@ else()
   add_library(ScGrabberApp OBJECT ${FRONTEND_SOURCES})
 endif()
 
-target_link_libraries(ScGrabberApp PRIVATE CB CBOS CBDebug OptionalAcornC)
+target_link_libraries(ScGrabberApp PRIVATE CB CBOS CBDebug CBUtil OptionalAcornC)
 target_compile_definitions(ScGrabberApp PRIVATE
   $<$<CONFIG:Debug>:DEBUG_OUTPUT>
 )
@@ -94,7 +94,7 @@ target_compile_definitions(ScGrabberApp PRIVATE
 # The module needs CMHG and assembler inputs for its native image. Compile
 # its C source on every platform, including cross-platform syntax checks.
 add_library(ScGrabberModule OBJECT ScrGrabber.c Errors.c ScrGrabberHdr.h)
-target_link_libraries(ScGrabberModule PRIVATE CB CBDebug OptionalAcornC)
+target_link_libraries(ScGrabberModule PRIVATE CB CBDebug CBUtil OptionalAcornC)
 target_compile_definitions(ScGrabberModule PRIVATE
   $<$<CONFIG:Debug>:DEBUG_OUTPUT>
 )

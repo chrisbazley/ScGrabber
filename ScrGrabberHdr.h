@@ -9,6 +9,8 @@
 #include "kernel.h"
 #endif
 
+#include "Optional.h"
+
 #define CMHG_VERSION 542
 
 #define Module_Title                     "ScreenGrabber"
@@ -35,7 +37,7 @@
  * for your module veneers via an intermediary such as SWI OS_CallEvery
  * (use _swix() to issue the SWI call).
  */
-_kernel_oserror *screengrabber_initialise(const char *cmd_tail, int podule_base, void *pw);
+_Optional _kernel_oserror *screengrabber_initialise(const char *cmd_tail, int podule_base, void *pw);
 
 
 /*
@@ -48,7 +50,7 @@ _kernel_oserror *screengrabber_initialise(const char *cmd_tail, int podule_base,
  * fatal, podule and pw are the values of R10, R11 and R12 (respectively)
  * on entry to the finalisation code.
  */
-_kernel_oserror *screengrabber_finalise(int fatal, int podule, void *pw);
+_Optional _kernel_oserror *screengrabber_finalise(int fatal, int podule, void *pw);
 
 
 /*
@@ -108,7 +110,7 @@ void svc_handler(int service_number, _kernel_swi_regs *r, void *pw);
 #define CMD_SGrabStatus                 7
 #define CMD_SGrabConfigure              8
 
-_kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void *pw);
+_Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void *pw);
 
 
 /*
@@ -142,8 +144,8 @@ extern void callback_veneer(void);
  * pw is the private word pointer ('R12') value with which the
  * entry veneer is called.
  */
-_kernel_oserror *ticker_handler(_kernel_swi_regs *r, void *pw);
-_kernel_oserror *callback_handler(_kernel_swi_regs *r, void *pw);
+_Optional _kernel_oserror *ticker_handler(_kernel_swi_regs *r, void *pw);
+_Optional _kernel_oserror *callback_handler(_kernel_swi_regs *r, void *pw);
 
 
 /*

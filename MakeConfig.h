@@ -23,8 +23,8 @@
 #include <stddef.h>
 
 /* Makes a *SGrabConfigure command from the settings held by the front-end. If
-   n is 0, nothing is written and s may be NULL. If is less than the required
-   buffer size then the output will be truncated. Returns the number of
+   n is 0, nothing is written, but s must still be non-null. If n is less
+   than the required buffer size, output is truncated. Returns the number of
    characters that would have been written had n been sufficiently large, not
    counting the nul terminator. */
 extern int make_config_cmd(char *s, size_t n);

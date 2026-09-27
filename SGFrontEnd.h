@@ -20,6 +20,8 @@
 #ifndef SGFrontEnd_h
 #define SGFrontEnd_h
 
+#include "Optional.h"
+
 #include <stdbool.h>
 
 typedef enum
@@ -33,7 +35,7 @@ RepeatType;
 extern int wimp_version;
 extern char task_name[];
 
-extern char *save_path; /* Base filename for screenshots */
+extern _Optional char *save_path; /* Base filename for screenshots */
 extern bool grab_enable; /* Is hotkey enabled? */
 extern bool force_film; /* If true then a single press starts filming */
 extern bool save_palette; /* Should the palette be saved with screenshots? */

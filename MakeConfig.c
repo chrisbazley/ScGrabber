@@ -18,6 +18,7 @@
  */
 
 /* 04.09.09 CJB Created this source file.
+   27.09.26 CJB Require a non-null output buffer, even for size queries.
 */
 
 /* ANSI headers */
@@ -38,7 +39,7 @@ int make_config_cmd(char *s, size_t n)
   char sync[32];
   int nchars;
 
-  assert(s != NULL || n == 0);
+  assert(s != NULL);
   DEBUGF("Making config command with buffer %p of size %u\n", s, n);
 
   switch (repeat_type)
