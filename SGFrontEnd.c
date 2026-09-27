@@ -40,6 +40,7 @@
    27.09.26 CJB Make Fortify debug output format-safe.
    27.09.26 CJB Keep assertion-only event codes used in release builds and
                 use a strict prototype for initialise().
+   27.09.26 CJB Declare local variables near their first use.
 */
 
 /* ISO C library headers */
@@ -276,8 +277,6 @@ static int misc_event_handler(int event_code, ToolboxEvent *event, IdBlock *id_b
 static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   SaveAsSaveToFileEvent *sastfe = (SaveAsSaveToFileEvent *) event;
-  _Optional FILE *f; /* output file handle */
-  int chars_out; /* no. of characters transmitted by fprintf() */
   _Optional const _kernel_oserror *e = NULL;
 
   assert(event_code == SaveAs_SaveToFile);
@@ -304,7 +303,8 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
 
     _kernel_last_oserror(); /* clear any previous OS error */
 
-    f = fopen(sastfe->filename, "w"); /* open text file for writing */
+    /* Open text file for writing. */
+    _Optional FILE *f = fopen(sastfe->filename, "w");
     if (f == NULL)
     {
       e = _kernel_last_oserror();
@@ -313,9 +313,9 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
     }
     else
     {
-      chars_out = fprintf(&*f,
-                          "| This file was generated automatically by the "
-                            APP_NAME" application\n");
+      int chars_out = fprintf(&*f,
+                              "| This file was generated automatically by the "
+                                APP_NAME" application\n");
 
       if (chars_out > 0)
       {
@@ -517,8 +517,6 @@ static void initialise(void)
 
 int main(int argc, const char *argv[])
 {
-  int event_code;
-
   NOT_USED(argc);
   NOT_USED(argv);
 
@@ -529,6 +527,7 @@ int main(int argc, const char *argv[])
    */
   while (TRUE)
   {
+    int event_code;
     event_poll (&event_code, &poll_block, 0);
   }
 }
