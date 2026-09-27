@@ -36,6 +36,7 @@
    27.09.26 CJB Make debug output format-safe.
    27.09.26 CJB Use portable types and conversions for host compilation.
    27.09.26 CJB Fully initialise command-switch state entries.
+   27.09.26 CJB Declare local variables at their first use.
 */
 
 #include <stdio.h>
@@ -532,19 +533,13 @@ static _Optional const _kernel_oserror *read_mode_vars(void)
 
 static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
 {
-  unsigned int screen_mode; /* this MUST be unsigned because it might be a
-                               top-bit-set address */
   _Optional PaletteEntry *palette = NULL;
-  unsigned int i, palette_size;
 #ifdef USE_STDIO
   _Optional FILE *out = NULL;
 #else
-  _kernel_osgbpb_block inout;
   int out = 0;
 #endif
   _Optional const _kernel_oserror *e = NULL;
-  SpriteAreaHeader area_header;
-  SpriteHeader sprite_header;
 
   assert(save_file_path != NULL);
 
@@ -578,14 +573,14 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
       VDUVar_EndOfList
     };
     intptr_t disp_var_val[ARRAY_SIZE(disp_var_num) - 1];
-    void *display_start;
+    unsigned int palette_size;
 
     /* Get the address of the frame buffer currently being displayed */
     e = os_read_vdu_variables(disp_var_num, disp_var_val);
     if (e != NULL)
       goto error;
 
-    display_start = (void *)disp_var_val[0];
+    void *display_start = (void *)disp_var_val[0];
 
     /* Read palette for current screen mode, if any */
     if (save_palette &&
@@ -603,8 +598,6 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
 
     if (palette_size > 0)
     {
-      unsigned int col;
-
       /* Allocate memory for palette */
       DEBUGF("Allocating %u bytes for palette\n", palette_size);
       palette = malloc(palette_size);
@@ -621,7 +614,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
       DEBUGF("Reading palette entries for %" PRIdPTR " colours\n",
              mode_vars[VarIndex_NColour] + 1);
 
-      for (col = 0; col <= mode_vars[VarIndex_NColour]; col++)
+      for (unsigned int col = 0; col <= mode_vars[VarIndex_NColour]; col++)
       {
         /* You might expect this SWI to read a sprite's palette when output
            has been redirected to a sprite - luckily it doesn't! */
@@ -653,6 +646,11 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     }
 
     /* Write sprite file header */
+    SpriteAreaHeader area_header;
+    SpriteHeader sprite_header;
+#ifndef USE_STDIO
+    _kernel_osgbpb_block inout;
+#endif
     area_header.sprite_count = 1;
     area_header.first = sizeof(area_header);
     area_header.used = sizeof(area_header) + sizeof(sprite_header) +
@@ -681,7 +679,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
             sizeof(sprite_header.name));
 
     /* Bizarrely, Paint rejects sprites named with upper-case characters! */
-    for (i = 0;
+    for (unsigned int i = 0;
          sprite_header.name[i] != '\0' && i < sizeof(sprite_header.name);
          i ++)
     {
@@ -702,6 +700,8 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     sprite_header.image = sizeof(sprite_header) + palette_size;
     sprite_header.mask = sprite_header.image; /* Sprite will never have mask */
 
+    /* This must be unsigned because it might be a top-bit-set address. */
+    unsigned int screen_mode;
 #ifdef SUPPORT_OS_310
     if (os_version < MinOSVersion)
     {
@@ -737,7 +737,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     {
       /* Search a short list of known old-style screen modes for one that
          matches the important features of the current mode */
-      for (i = 0; i < ARRAY_SIZE(known_modes); i++)
+      for (unsigned int i = 0; i < ARRAY_SIZE(known_modes); i++)
       {
         if (known_modes[i].XEigFactor == mode_vars[VarIndex_XEigFactor] &&
             known_modes[i].YEigFactor == mode_vars[VarIndex_YEigFactor] &&
@@ -1082,7 +1082,6 @@ int event_handler(_kernel_swi_regs *r, void *pw)
 _Optional _kernel_oserror *screengrabber_initialise(const char *cmd_tail, int podule_base, void *pw)
 {
   _Optional const _kernel_oserror *e = NULL;
-  unsigned int pow = 0, temp;
 
   NOT_USED(cmd_tail);
   NOT_USED(podule_base);
@@ -1103,8 +1102,8 @@ _Optional _kernel_oserror *screengrabber_initialise(const char *cmd_tail, int po
   /* Raise 10 to the power of the number of decimal digits allocated for the
      screen shot file name's numeric suffix, to calculate the number of
      unique file names that can be generated. */
-  temp = 1;
-  for (pow = 1; pow <= NumSuffixLen; pow++)
+  unsigned int temp = 1;
+  for (unsigned int pow = 1; pow <= NumSuffixLen; pow++)
     temp *= 10;
 
   DEBUGF("No. of unique file names is %u\n", temp);
@@ -1598,15 +1597,11 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
   /* If any arguments were passed in the command tail then decode them */
   if (argc > 0)
   {
-    const char *syntax;
-
-    if (cmd_no == CMD_SGrabConfigure)
-      syntax = "On/s,Off/s,Single/s,Film/s,KeyName=KN/k,KeyCode=KC/k/e,"
-               "Interval/k,AutoSync=AS/s,HalfSync=HS/s,"
-               "NoPalette=NP/s,Palette/s,NewSprite=NS/s,OldSprite=OS/s,"
-               "Filename/k";
-    else
-      syntax = "/a";
+    const char *syntax = cmd_no == CMD_SGrabConfigure ?
+      "On/s,Off/s,Single/s,Film/s,KeyName=KN/k,KeyCode=KC/k/e,"
+      "Interval/k,AutoSync=AS/s,HalfSync=HS/s,"
+      "NoPalette=NP/s,Palette/s,NewSprite=NS/s,OldSprite=OS/s,"
+      "Filename/k" : "/a";
 
     e = _swix(OS_ReadArgs,
               _INR(0,3),
@@ -1669,8 +1664,6 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
         { { Arg_NewSprite, NULL }, { Arg_OldSprite, NULL }, { Arg_END, NULL } }
       }
     };
-    unsigned int i;
-
     switch (cmd_no)
     {
       case CMD_SGrab:/* SGrab [<file path>] */
@@ -1686,7 +1679,7 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
 
       case CMD_SGrabStatus:
         puts(MOD_NAME" status:\n---------------------");
-        for ( i = 0; e == NULL && i < ARRAY_SIZE(switches); i++ )
+        for ( unsigned int i = 0; e == NULL && i < ARRAY_SIZE(switches); i++ )
         {
           if ( switches[i].show )
             switches[i].show();
@@ -1701,19 +1694,16 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
            [-[No]Palette] [-NewSprite|-OldSprite] [-Filename <filename>]" */
 
         /* Two passes are required to implement the strong exception guarantee */
-        for ( i = 0; e == NULL && i < 2; i++ )
+        for ( unsigned int i = 0; e == NULL && i < 2; i++ )
         {
-          unsigned int j;
-
           /* Examine each group of mutually-exclusive arguments in turn */
-          for ( j = 0; e == NULL && j < ARRAY_SIZE(switches); j++ )
+          for ( unsigned int j = 0; e == NULL && j < ARRAY_SIZE(switches); j++ )
           {
-            unsigned int k;
             const ArgSwitch * const sw = switches + j;
             bool found = false;
 
             /* Examine each argument in the mutually-exclusive group */
-            for ( k = 0; e == NULL && sw->states[k].index != Arg_END; k++ )
+            for ( unsigned int k = 0; e == NULL && sw->states[k].index != Arg_END; k++ )
             {
               const int index = sw->states[k].index;
               if ( read_args_buf[index] == NULL )
@@ -1742,7 +1732,7 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
 
       default:
         /* Check for other commands */
-        for ( i = 0; e == NULL && i < ARRAY_SIZE(switches); i++ )
+        for ( unsigned int i = 0; e == NULL && i < ARRAY_SIZE(switches); i++ )
         {
           const ArgSwitch * const sw = switches + i;
 
@@ -1758,11 +1748,10 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
           }
           else if ( sw->handler )
           {
-            unsigned int j;
             bool found = false;
 
             /* Try to match the command parameter with the name of a state */
-            for ( j = 0; !found && e == NULL && sw->states[j].index != Arg_END; j++ )
+            for ( unsigned int j = 0; !found && e == NULL && sw->states[j].index != Arg_END; j++ )
             {
 
               if ( sw->states[j].string == NULL ||
@@ -1770,7 +1759,7 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
                 continue;
 
               /* Translate state name into equivalent SGrabConfigure argument index */
-              int index = sw->states[j].index;
+              const int index = sw->states[j].index;
               e = sw->handler( read_args_buf[0], index );
               found = true;
             }
