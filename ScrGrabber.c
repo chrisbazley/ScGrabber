@@ -39,6 +39,9 @@
    27.09.26 CJB Declare local variables at their first use.
    27.09.26 CJB Use designated initializers for sprite headers and offsetof
                 for their serialized extents.
+   28.09.26 CJB Reject mode values too large for sprite header fields.
+   28.09.26 CJB Keep calculations in the natural types of mode variables and
+                object sizes until writing 32-bit sprite header fields.
 */
 
 #include <stdio.h>
@@ -397,6 +400,31 @@ static _Optional const _kernel_oserror *no_mem_error(void)
 
 /* ----------------------------------------------------------------------- */
 
+static int mode_value_to_int(intptr_t const value)
+{
+  assert(value >= INT_MIN);
+  assert(value <= INT_MAX);
+  return (int)value;
+}
+
+/* ----------------------------------------------------------------------- */
+
+static int size_to_int(size_t const value)
+{
+  assert(value <= INT_MAX);
+  return (int)value;
+}
+
+/* ----------------------------------------------------------------------- */
+
+static int uintptr_to_int(uintptr_t const value)
+{
+  assert(value <= INT_MAX);
+  return (int)value;
+}
+
+/* ----------------------------------------------------------------------- */
+
 static void record_error(_Optional const _kernel_oserror *e)
 {
   if (e != NULL)
@@ -568,6 +596,15 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     DEBUGF("Screen mode is unsuitable (log2 bpp = %" PRIdPTR ")\n",
            mode_vars[VarIndex_Log2BPP]);
   }
+  else if (mode_vars[VarIndex_LineLength] <= 0 ||
+           mode_vars[VarIndex_LineLength] > INT_MAX ||
+           mode_vars[VarIndex_XWindLimit] < 0 ||
+           mode_vars[VarIndex_XWindLimit] > INT_MAX ||
+           mode_vars[VarIndex_YWindLimit] < 0 ||
+           mode_vars[VarIndex_YWindLimit] > INT_MAX)
+  {
+    DEBUGF("Screen mode has out-of-range dimensions\n");
+  }
   else
   {
     static const VDUVar disp_var_num[] =
@@ -576,7 +613,13 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
       VDUVar_EndOfList
     };
     intptr_t disp_var_val[ARRAY_SIZE(disp_var_num) - 1];
-    unsigned int palette_size;
+    size_t palette_size = 0;
+    intptr_t colour_count = 0;
+
+    intptr_t const line_length = mode_vars[VarIndex_LineLength];
+    intptr_t const xwind_limit = mode_vars[VarIndex_XWindLimit];
+    intptr_t const ywind_limit = mode_vars[VarIndex_YWindLimit];
+    intptr_t const log2bpp = mode_vars[VarIndex_Log2BPP];
 
     /* Get the address of the frame buffer currently being displayed */
     e = os_read_vdu_variables(disp_var_num, disp_var_val);
@@ -592,17 +635,29 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     {
       /* Calculate required buffer size. We need room for a pair of palette
          entries (first flash, second flash) for each logical colour. */
-      palette_size = sizeof(palette[0]) * (mode_vars[VarIndex_NColour] + 1) * 2;
+      colour_count = mode_vars[VarIndex_NColour] + 1;
+      palette_size = sizeof(palette[0]) * colour_count * 2;
     }
-    else
+
+    if (mode_vars[VarIndex_ScreenSize] < 0)
     {
-      palette_size = 0;
+      DEBUGF("Screen mode has a negative screen size\n");
+      goto error;
+    }
+
+    size_t const screen_size = (size_t)mode_vars[VarIndex_ScreenSize];
+    if (screen_size >
+        INT_MAX - offsetof(SpriteAreaHeader, extension_words) -
+        offsetof(SpriteHeader, palette_data) - palette_size)
+    {
+      DEBUGF("Screen mode has an out-of-range screen size\n");
+      goto error;
     }
 
     if (palette_size > 0)
     {
       /* Allocate memory for palette */
-      DEBUGF("Allocating %u bytes for palette\n", palette_size);
+      DEBUGF("Allocating %zu bytes for palette\n", palette_size);
       palette = malloc(palette_size);
       if (palette == NULL)
       {
@@ -615,9 +670,9 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
          whole palette at once using ColourTrans_ReadPalette because it outputs
          a simpler format that doesn't cater for flashing colours. :o( */
       DEBUGF("Reading palette entries for %" PRIdPTR " colours\n",
-             mode_vars[VarIndex_NColour] + 1);
+             colour_count);
 
-      for (unsigned int col = 0; col <= mode_vars[VarIndex_NColour]; col++)
+      for (intptr_t col = 0; col < colour_count; col++)
       {
         /* You might expect this SWI to read a sprite's palette when output
            has been redirected to a sprite - luckily it doesn't! */
@@ -648,13 +703,21 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
       goto error;
     }
 
+    size_t const image_offset =
+      offsetof(SpriteHeader, palette_data) + palette_size;
+    size_t const sprite_size = image_offset + screen_size;
+    size_t const area_used =
+      offsetof(SpriteAreaHeader, extension_words) + sprite_size;
+
+    intptr_t const width_words_minus_one = (line_length - 1) / 4;
+    intptr_t const right_bit = SPRITE_RIGHT_BIT_LOG2(
+      (xwind_limit % 32) + 1, log2bpp);
+
     SpriteAreaHeader area_header =
     {
       .sprite_count = 1,
-      .first = offsetof(SpriteAreaHeader, extension_words),
-      .used = offsetof(SpriteAreaHeader, extension_words) +
-              offsetof(SpriteHeader, palette_data) + palette_size +
-              mode_vars[VarIndex_ScreenSize]
+      .first = size_to_int(offsetof(SpriteAreaHeader, extension_words)),
+      .used = size_to_int(area_used)
     };
 #ifndef USE_STDIO
     _kernel_osgbpb_block inout;
@@ -680,16 +743,13 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
        the amount of right hand wastage for each row. */
     SpriteHeader sprite_header =
     {
-      .size = offsetof(SpriteHeader, palette_data) + palette_size +
-              mode_vars[VarIndex_ScreenSize],
-      .width = ((unsigned)mode_vars[VarIndex_LineLength] + 3) / 4 - 1,
-      .height = mode_vars[VarIndex_YWindLimit],
+      .size = size_to_int(sprite_size),
+      .width = mode_value_to_int(width_words_minus_one),
+      .height = mode_value_to_int(ywind_limit),
       .left_bit = 0, /* Left-hand wastage is deprecated */
-      .right_bit = SPRITE_RIGHT_BIT_LOG2(
-                     (unsigned)mode_vars[VarIndex_XWindLimit] + 1,
-                     mode_vars[VarIndex_Log2BPP]),
-      .image = offsetof(SpriteHeader, palette_data) + palette_size,
-      .mask = offsetof(SpriteHeader, palette_data) + palette_size
+      .right_bit = mode_value_to_int(right_bit),
+      .image = size_to_int(image_offset),
+      .mask = size_to_int(image_offset)
               /* Sprite has no mask */
     };
 
@@ -703,11 +763,11 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
          sprite_header.name[i] != '\0' && i < sizeof(sprite_header.name);
          i ++)
     {
-      sprite_header.name[i] = tolower(sprite_header.name[i]);
+      sprite_header.name[i] = (char)tolower(sprite_header.name[i]);
     }
 
-    /* This must be unsigned because it might be a top-bit-set address. */
-    unsigned int screen_mode;
+    /* OS_ScreenMode returns either a mode number or a mode-selector address. */
+    uintptr_t screen_mode;
 #ifdef SUPPORT_OS_310
     if (os_version < MinOSVersion)
     {
@@ -734,7 +794,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
       if (e != NULL)
         goto error;
     }
-    DEBUGF("Screen mode is 0x%x\n", screen_mode);
+    DEBUGF("Screen mode is 0x%" PRIxPTR "\n", screen_mode);
 
     /* If the configured preference is for old-format sprites and OS_ScreenMode
        returned a pointer to a mode specifier block then try to find an
@@ -751,7 +811,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
         {
           /* This old-style mode number is a good enough match to use */
           screen_mode = known_modes[i].ModeNumber;
-          DEBUGF("Substituting mode number %u\n", screen_mode);
+          DEBUGF("Substituting mode number %" PRIuPTR "\n", screen_mode);
           break;
         }
       }
@@ -761,7 +821,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
        must create a new-format sprite, whatever the configured preference. */
     if (screen_mode > LastNumberedMode)
     {
-      unsigned int type;
+      intptr_t type;
 
       /* Synthesise a sprite type specifier (supported from RISC OS 3.5). */
       sprite_header.type =
@@ -778,14 +838,15 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
       else
       {
         /* sprite types: 1=1bpp, 2=2bpp, 3=4bpp, 4=8bpp, 5=16bpp, 6=24bpp */
-        type = mode_vars[VarIndex_Log2BPP] + 1;
+        type = log2bpp + 1;
       }
-      sprite_header.type |= type << SPRITE_INFO_TYPE_SHIFT;
+      sprite_header.type |= mode_value_to_int(
+        type << SPRITE_INFO_TYPE_SHIFT);
     }
     else
     {
       /* Use mode number as sprite type */
-      sprite_header.type = screen_mode;
+      sprite_header.type = uintptr_to_int(screen_mode);
     }
     DEBUGF("Sprite type is 0x%x\n", sprite_header.type);
 
@@ -801,7 +862,7 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     /* Dump current screen palette to output file, if buffered */
     if (palette != NULL)
     {
-      DEBUGF("Writing sprite palette (%u bytes)\n", palette_size);
+      DEBUGF("Writing sprite palette (%zu bytes)\n", palette_size);
       if (!FWRITE(&*palette, palette_size, out))
       {
         e =  _kernel_last_oserror();
@@ -810,10 +871,10 @@ static _Optional const _kernel_oserror *save_screen(const char *save_file_path)
     }
 
     /* Dump contents of frame buffer to output file (same format as a sprite) */
-    DEBUGF("Copying sprite bitmap from frame buffer %p (%" PRIdPTR " bytes)\n",
-           display_start, mode_vars[VarIndex_ScreenSize]);
+    DEBUGF("Copying sprite bitmap from frame buffer %p (%zu bytes)\n",
+           display_start, screen_size);
 
-    if (!FWRITE(display_start, mode_vars[VarIndex_ScreenSize], out))
+    if (!FWRITE(display_start, screen_size, out))
     {
       e = _kernel_last_oserror();
       goto error;

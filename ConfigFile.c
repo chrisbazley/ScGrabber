@@ -286,6 +286,10 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
             /* Find end of string value (first whitespace character). */
             for (end = value; *end != '\0'; end++)
             {
+              /* The input-derived character is in isspace's domain after
+                 conversion to unsigned char, but the analyzer reports its
+                 use as a libc table index. */
+              // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
               if (isspace((unsigned char)*end))
                 break;
             }
