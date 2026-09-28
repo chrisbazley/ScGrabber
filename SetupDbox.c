@@ -408,11 +408,13 @@ static _Optional const _kernel_oserror *setup_set_faded(bool use_interval)
 
 /* ----------------------------------------------------------------------- */
 
-static _Optional const _kernel_oserror *setup_set_name(unsigned int key_code)
+static _Optional const _kernel_oserror *setup_set_name(
+  unsigned int selected_key_code)
 {
   const _Optional char *key_name = NULL;
 
-  _Optional const _kernel_oserror *e = lookup_key_name(key_code, &key_name);
+  _Optional const _kernel_oserror *e =
+    lookup_key_name(selected_key_code, &key_name);
   if (e != NULL && e->errnum == ErrNum_MessageNotFound)
   {
     DEBUGF("Suppressing error '%s'\n", e->errmess);
