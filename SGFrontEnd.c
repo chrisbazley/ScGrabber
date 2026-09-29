@@ -42,6 +42,7 @@
                 use a strict prototype for initialise().
    27.09.26 CJB Declare local variables near their first use.
    29.09.26 CJB Build configuration commands in a string buffer.
+   29.09.26 CJB Require an error when reporting an initialisation failure.
 */
 
 /* ISO C library headers */
@@ -192,12 +193,11 @@ static bool may_kill_shared_module(const char *find_name)
 
 /* ----------------------------------------------------------------------- */
 
-static void simple_exit(_Optional const _kernel_oserror *e)
+static void simple_exit(const _kernel_oserror *e)
 {
   /* Limited amount we can do with no messages file... */
   assert(e != NULL);
-  if (e != NULL)
-    wimp_report_error((_kernel_oserror *)&*e, Wimp_ReportError_Cancel, APP_NAME);
+  wimp_report_error((_kernel_oserror *)e, Wimp_ReportError_Cancel, APP_NAME);
   exit(EXIT_FAILURE);
 }
 
@@ -438,7 +438,7 @@ static void initialise(void)
                          NULL,
                          NULL);
   if (e != NULL)
-    simple_exit(e);
+    simple_exit(&*e);
 
   /*
    * Look up the localised task name and use it to initialise the error
@@ -451,11 +451,11 @@ static void initialise(void)
                           NULL,
                           0);
   if (e != NULL)
-    simple_exit(e);
+    simple_exit(&*e);
 
   e = err_initialise(task_name, wimp_version >= MinExtErrorWimpVersion, &mfd);
   if (e != NULL)
-    simple_exit(e);
+    simple_exit(&*e);
 
   /*
    * Install an exit handler to kill the ScreenGrabber module.
