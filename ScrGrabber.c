@@ -43,6 +43,7 @@
    28.09.26 CJB Keep calculations in the natural types of mode variables and
                 object sizes until writing 32-bit sprite header fields.
    29.09.26 CJB Use VDUVar constants to read mode variables.
+   29.09.26 CJB Copy recorded OS errors by assignment.
 */
 
 #include <stdio.h>
@@ -430,7 +431,7 @@ static void record_error(_Optional const _kernel_oserror *e)
 {
   if (e != NULL)
   {
-    memcpy(&last_error, &*e, sizeof(last_error));
+    last_error = *e;
     error_recorded = true;
   }
 }
