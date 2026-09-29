@@ -20,14 +20,13 @@
 #ifndef MakeConfig_h
 #define MakeConfig_h
 
-#include <stddef.h>
+#include <stdbool.h>
+#include "StringBuff.h"
 
-/* Makes a *SGrabConfigure command from the settings held by the front-end. If
-   n is 0, nothing is written, but s must still be non-null. If n is less
-   than the required buffer size, output is truncated. Returns the number of
-   characters that would have been written had n been sufficiently large, not
-   counting the nul terminator. */
-extern int make_config_cmd(char *s, size_t n);
+/* Appends a *SGrabConfigure command to an initialized string buffer from
+   the settings held by the front-end. Returns false if allocation fails.
+   The caller must destroy the buffer even on failure. */
+extern bool make_config_cmd(StringBuffer *buffer);
 
 #endif
 

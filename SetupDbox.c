@@ -28,6 +28,7 @@
    27.09.26 CJB Declare local variables at their first use.
    27.09.26 CJB Use a designated initializer for the outgoing DataSave
                 message.
+   29.09.26 CJB Build configuration commands in a string buffer.
 */
 
 /* ANSI headers */
@@ -62,6 +63,7 @@
 
 /* CBUtilLib headers */
 #include "Optional.h"
+#include "StringBuff.h"
 
 /* Local headers */
 #include "FEutils.h"
@@ -305,30 +307,21 @@ _Optional const _kernel_oserror *configure_module(void)
 
   DEBUGF("Configuring back-end\n");
 
-  /* Find string buffer size required for the configuration command
-     (an extra byte will be required for the nul terminator) */
-  char unused;
-  int req = make_config_cmd(&unused, 0) + 1;
-  DEBUGF("%d bytes required for star command\n", req);
-
-  /* Allocate a string buffer of appropriate size */
-  _Optional char *cmd_buffer = malloc(req);
-  if (cmd_buffer == NULL)
+  StringBuffer cmd_buffer;
+  stringbuffer_init(&cmd_buffer);
+  if (!make_config_cmd(&cmd_buffer))
   {
     e = msgs_error(DUMMY_ERRNO, "NoMem");
   }
   else
   {
     /* Execute the configuration command */
-    (void)make_config_cmd(&*cmd_buffer, req);
-
-    DEBUGF("Executing command '%s'\n", cmd_buffer);
-    if (_kernel_oscli(&*cmd_buffer) == _kernel_ERROR)
+    const char *const command = stringbuffer_get_pointer(&cmd_buffer);
+    DEBUGF("Executing command '%s'\n", command);
+    if (_kernel_oscli(command) == _kernel_ERROR)
       e = _kernel_last_oserror();
-
-    /* Deallocate the string buffer */
-    free(cmd_buffer);
   }
+  stringbuffer_destroy(&cmd_buffer);
 
   return e;
 }
