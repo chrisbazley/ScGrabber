@@ -24,6 +24,8 @@
    27.09.26 CJB Use the correct type for strtoul's end pointer.
    27.09.26 CJB Use size-appropriate types and format specifiers.
    27.09.26 CJB Declare loop counters and conversion results at first use.
+   29.09.26 CJB Finish moving loop counters to their first use.
+   29.09.26 CJB Use strdup for string configuration values.
 */
 
 /* ANSI headers */
@@ -193,12 +195,10 @@ _Optional const _kernel_oserror *save_config(const char *dest_file)
 
 /* ----------------------------------------------------------------------- */
 
-static _Optional const _kernel_oserror *interpret_line(const char *line, const char *source_file, unsigned int line_num)
+static _Optional const _kernel_oserror *interpret_line(char *line, const char *source_file, unsigned int line_num)
 {
   bool mistake = false;
   _Optional const _kernel_oserror *e = NULL;
-  unsigned int i;
-
   assert(line != NULL);
   assert(source_file != NULL);
 
@@ -219,11 +219,12 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
     size_t name_len = colon - line;
     DEBUGF("Length of input line prefix is %zu\n", name_len);
 
-    const char *value = colon + 1;
+    char *value = colon + 1;
     DEBUGF("Value to assign is '%s'\n", value);
 
     /* Compare the prefix with each known variable name in turn */
-    for (i = 0; i < ARRAY_SIZE(config_map); i++)
+    unsigned int i = 0;
+    for (; i < ARRAY_SIZE(config_map); i++)
     {
       /* The names must match up to the end of the prefix, which
          must also be the end of the variable name */
@@ -279,12 +280,11 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
 
         default:
           {
-            const char *end;
-
             assert(config_map[i].type == Type_String);
 
             /* Find end of string value (first whitespace character). */
-            for (end = value; *end != '\0'; end++)
+            char *end = value;
+            for (; *end != '\0'; end++)
             {
               /* The input-derived character is in isspace's domain after
                  conversion to unsigned char, but the analyzer reports its
@@ -295,19 +295,14 @@ static _Optional const _kernel_oserror *interpret_line(const char *line, const c
             }
             if (*end == '\n')
             {
-              /* Allocate a buffer large enough for the string value and nul
-                 terminator */
-              _Optional char *new_string = malloc(end - value + 1);
+              *end = '\0';
+              _Optional char *new_string = strdup(value);
               if (new_string == NULL)
               {
-                /* Insufficient free memory for string buffer */
                 e = msgs_error(DUMMY_ERRNO, "NoMem");
               }
               else
               {
-                /* Copy new string value into the buffer */
-                strncpy(&*new_string, value, end - value);
-                new_string[end - value] = '\0';
                 DEBUGF("Got string value '%s'\n", new_string);
 
                 /* Replace existing string value */
@@ -384,10 +379,9 @@ _Optional const _kernel_oserror *load_config(const char *source_file)
   }
   else
   {
-    unsigned int line;
     char read_line[256];
 
-    for (line = 1; e == NULL; line++)
+    for (unsigned int line = 1; e == NULL; line++)
     {
       /* Read as much of the next line as will fit in our string buffer */
       _Optional char *got = fgets(read_line, sizeof(read_line), &*f);
