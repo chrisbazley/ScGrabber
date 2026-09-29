@@ -21,106 +21,64 @@
    27.09.26 CJB Require a non-null output buffer, even for size queries.
    27.09.26 CJB Use the correct format specifiers for pointers and sizes.
    27.09.26 CJB Defer the output-length declaration until construction.
+   29.09.26 CJB Build configuration commands in a CBUtilLib string buffer.
 */
 
 /* ANSI headers */
-#include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 /* CBLibrary headers */
 #include "Debug.h"
+
+/* CBUtilLib headers */
+#include "StringBuff.h"
 
 /* Local headers */
 #include "SGFrontEnd.h"
 #include "MakeConfig.h"
 
-int make_config_cmd(char *s, size_t n)
+bool make_config_cmd(StringBuffer *buffer)
 {
-  char sync[32];
+  char interval_text[sizeof("Interval ") + sizeof(unsigned int) * CHAR_BIT];
+  const char *sync;
 
-  assert(s != NULL);
-  DEBUGF("Making config command with buffer %p of size %zu\n", (void *)s, n);
+  assert(buffer != NULL);
+  assert(save_path != NULL);
+  if (save_path == NULL)
+    return false;
+  const char *const path = &*save_path;
 
   switch (repeat_type)
   {
     case RepeatType_AutoSync:
-      strcpy(sync, "AutoSync");
+      sync = "AutoSync";
       break;
 
     case RepeatType_HalfSync:
-      strcpy(sync, "HalfSync");
+      sync = "HalfSync";
       break;
 
     default:
       assert(repeat_type == RepeatType_Interval);
-      sprintf(sync, "Interval %u", interval);
+      (void)sprintf(interval_text, "Interval %u", interval);
+      sync = interval_text;
       break;
   }
 
-  assert(save_path != NULL);
+  bool const success = stringbuffer_printf(buffer,
+      "SGrabConfigure -%s -%s -KeyCode %d -%s -%s -%s -Filename %s",
+      grab_enable ? "On" : "Off",
+      force_film ? "Film" : "Single",
+      key_code,
+      sync,
+      save_palette ? "Palette" : "NoPalette",
+      new_sprite ? "NewSprite" : "OldSprite",
+      path);
 
-  int nchars;
-#ifdef OLD_SCL_STUBS
-  {
-    /* Temporary buffer in which to construct the first part of the command,
-       which has a predictable maximum length */
-    char temp[256];
+  if (success)
+    DEBUGF("Command is '%s'\n", stringbuffer_get_pointer(buffer));
 
-    /* Construct the first part of the configuration command */
-    nchars = sprintf(temp,
-#else /* OLD_SCL_STUBS */
-    nchars = snprintf(s, n,
-#endif /* OLD_SCL_STUBS */
-                     "SGrabConfigure -%s -%s -KeyCode %d -%s -%s -%s -Filename "
-#ifndef OLD_SCL_STUBS
-                     "%s"
-#endif /* OLD_SCL_STUBS*/
-                    ,grab_enable ? "On" : "Off",
-                     force_film ? "Film" : "Single",
-                     key_code,
-                     sync,
-                     save_palette ? "Palette" : "NoPalette",
-                     new_sprite ? "NewSprite" : "OldSprite"
-#ifndef OLD_SCL_STUBS
-                    ,save_path);
-#else /* OLD_SCL_STUBS*/
-                    );
-    DEBUGF("%d characters written by sprintf\n", nchars);
-    assert(nchars < sizeof(temp)); /* guard against buffer overrun */
-    assert(nchars == strlen(temp));
-
-    /* If a buffer was specified then copy as much of the partial command
-       string into it as will fit */
-    if (n > 0)
-    {
-      DEBUGF("Copying up to %zu chars into caller's buffer\n", n - 1);
-      strncpy(s, temp, n - 1);
-
-      /* If there is any space remaining in the caller's buffer then append
-         as much of the file path as will fit */
-      if (nchars < n - 1)
-      {
-        DEBUGF("Copying up to %zu chars to offset %d in caller's buffer\n",
-               n - 1 - nchars, nchars);
-        strncpy(s + nchars, save_path, n - 1 - nchars);
-      }
-
-      DEBUGF("Adding terminator at offset %zu\n", n - 1);
-      s[n - 1] = '\0'; /* strncpy pads with zeros only if the source string is
-                          shorter than the maximum no. of characters to copy. */
-    }
-
-    /* Number of characters that would have been output had a large enough
-       buffer been supplied must include the length of the file path */
-    nchars += strlen(save_path);
-  }
-#endif /* OLD_SCL_STUBS */
-
-  DEBUGF("Length of command is %d characters\n", nchars);
-  if (s != NULL)
-    DEBUGF("Command is '%s'\n", s);
-
-  return nchars;
+  return success;
 }

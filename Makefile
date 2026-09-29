@@ -2,8 +2,8 @@
 
 
 # Toolflags:
-CCflags = -c -depend !Depend -IC: -IFortify: -throwback -DNDEBUG -DOLD_SCL_STUBS -fahi -apcs 3/32/fpe2/swst/fp/nofpr -memaccess -L22-S22-L41
-#CCflags = -c -depend !Depend -IC: -IFortify: -throwback -DOLD_SCL_STUBS -DDEBUG_OUTPUT -fahi -apcs 3/32/fpe2/swst/fp/nofpr
+CCflags = -c -depend !Depend -IC: -IFortify: -throwback -DNDEBUG -fahi -apcs 3/32/fpe2/swst/fp/nofpr -memaccess -L22-S22-L41
+#CCflags = -c -depend !Depend -IC: -IFortify: -throwback -DDEBUG_OUTPUT -fahi -apcs 3/32/fpe2/swst/fp/nofpr
 C++flags = -c -depend !Depend -IC: -IFortify: -throwback
 Linkflags = -aif -c++ -o $@
 ObjAsmflags = -throwback -NoCache -depend !Depend
@@ -14,11 +14,11 @@ ASMflags =
 
 
 # Final targets:
-@.!RunImage:   C:o.StubsG C:o.wimplib C:o.eventlib C:stubsg_o.CBLib C:o.CBOSLib \
+@.!RunImage:   C:o.StubsG C:o.wimplib C:o.eventlib C:stubsg_o.CBLib C:o.CBOSLib C:o.CBUtilLib \
         C:o.toolboxlib @.o.SGFrontEnd @.o.MakeConfig @.o.FEutils @.o.KeyNames \
         @.o.ConfigFile @.o.SetupDbox C:stubsg_o.ErrNotRec 
         Link $(Linkflags) C:o.StubsG C:o.wimplib C:o.eventlib \
-        C:stubsg_o.CBLib C:o.CBOSLib C:o.toolboxlib @.o.SGFrontEnd @.o.MakeConfig @.o.FEutils \
+        C:stubsg_o.CBLib C:o.CBOSLib C:o.CBUtilLib C:o.toolboxlib @.o.SGFrontEnd @.o.MakeConfig @.o.FEutils \
         @.o.KeyNames @.o.ConfigFile @.o.SetupDbox C:stubsg_o.ErrNotRec
         Squeeze $(Squeezeflags) @.!RunImage
 

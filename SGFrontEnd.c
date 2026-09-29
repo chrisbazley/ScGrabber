@@ -41,6 +41,7 @@
    27.09.26 CJB Keep assertion-only event codes used in release builds and
                 use a strict prototype for initialise().
    27.09.26 CJB Declare local variables near their first use.
+   29.09.26 CJB Build configuration commands in a string buffer.
 */
 
 /* ISO C library headers */
@@ -75,6 +76,7 @@
 
 /* CBUtilLib headers */
 #include "Optional.h"
+#include "StringBuff.h"
 
 /* Local headers */
 #include "FEutils.h"
@@ -285,22 +287,14 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
   assert(id_block != NULL);
   NOT_USED(handle);
 
-  /* Find buffer size required for the configuration command
-     (an extra byte will be required for the nul terminator) */
-  char unused;
-  int req = make_config_cmd(&unused, 0) + 1;
-
-  /* Allocate a buffer for the configuration command */
-  _Optional char *cmd_buffer = malloc(req);
-  if (cmd_buffer == NULL)
+  StringBuffer cmd_buffer;
+  stringbuffer_init(&cmd_buffer);
+  if (!make_config_cmd(&cmd_buffer))
   {
     e = msgs_error(DUMMY_ERRNO, "NoMem");
   }
   else
   {
-    /* Synthesise the configuration command */
-    (void)make_config_cmd(&*cmd_buffer, req);
-
     _kernel_last_oserror(); /* clear any previous OS error */
 
     /* Open text file for writing. */
@@ -327,7 +321,7 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
       }
 
       if (chars_out > 0)
-        chars_out = fprintf(&*f, "%s\n", cmd_buffer);
+        chars_out = fprintf(&*f, "%s\n", stringbuffer_get_pointer(&cmd_buffer));
 
       fclose(&*f);
 
@@ -345,9 +339,8 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
       }
     }
 
-    /* Deallocate the configuration command buffer */
-    free(cmd_buffer);
   }
+  stringbuffer_destroy(&cmd_buffer);
 
   ON_ERR_RPT(e);
 
