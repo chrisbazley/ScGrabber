@@ -42,6 +42,7 @@
    28.09.26 CJB Reject mode values too large for sprite header fields.
    28.09.26 CJB Keep calculations in the natural types of mode variables and
                 object sizes until writing 32-bit sprite header fields.
+   29.09.26 CJB Use VDUVar constants to read mode variables.
 */
 
 #include <stdio.h>
@@ -541,15 +542,15 @@ static _Optional const _kernel_oserror *read_mode_vars(void)
      variable value indicies */
   static const VDUVar variable_nos[VarIndex_LAST + 1] =
   {
-    (VDUVar)ModeVar_ModeFlags,
-    (VDUVar)ModeVar_NColour,
-    (VDUVar)ModeVar_XEigFactor,
-    (VDUVar)ModeVar_YEigFactor,
-    (VDUVar)ModeVar_LineLength,
-    (VDUVar)ModeVar_ScreenSize,
-    (VDUVar)ModeVar_Log2BPP,
-    (VDUVar)ModeVar_XWindLimit,
-    (VDUVar)ModeVar_YWindLimit,
+    VDUVar_ModeFlags,
+    VDUVar_NColour,
+    VDUVar_XEigFactor,
+    VDUVar_YEigFactor,
+    VDUVar_LineLength,
+    VDUVar_ScreenSize,
+    VDUVar_Log2BPP,
+    VDUVar_XWindLimit,
+    VDUVar_YWindLimit,
     VDUVar_EndOfList
   };
 
