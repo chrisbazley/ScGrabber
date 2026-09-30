@@ -44,6 +44,8 @@
                 object sizes until writing 32-bit sprite header fields.
    29.09.26 CJB Use VDUVar constants to read mode variables.
    29.09.26 CJB Copy recorded OS errors by assignment.
+   30.09.26 CJB Designate mode variable indices and derive the result array
+                size from the input list.
 */
 
 #include <stdio.h>
@@ -168,8 +170,6 @@ enum
                                   provide SWI OS_ScreenMode */
 };
 
-/* Must keep the following enumeration synchronised with the array of
-   mode variable numbers */
 enum
 {
   VarIndex_ModeFlags,
@@ -180,8 +180,21 @@ enum
   VarIndex_ScreenSize,
   VarIndex_Log2BPP,
   VarIndex_XWindLimit,
-  VarIndex_YWindLimit,
-  VarIndex_LAST
+  VarIndex_YWindLimit
+};
+
+static const VDUVar variable_nos[] =
+{
+  [VarIndex_ModeFlags] = VDUVar_ModeFlags,
+  [VarIndex_NColour] = VDUVar_NColour,
+  [VarIndex_XEigFactor] = VDUVar_XEigFactor,
+  [VarIndex_YEigFactor] = VDUVar_YEigFactor,
+  [VarIndex_LineLength] = VDUVar_LineLength,
+  [VarIndex_ScreenSize] = VDUVar_ScreenSize,
+  [VarIndex_Log2BPP] = VDUVar_Log2BPP,
+  [VarIndex_XWindLimit] = VDUVar_XWindLimit,
+  [VarIndex_YWindLimit] = VDUVar_YWindLimit,
+  VDUVar_EndOfList
 };
 
 /* Keep the following enumeration synchronised with the syntax string
@@ -258,7 +271,7 @@ static int os_version;
 static _kernel_oserror last_error; /* Most recent OS error to occur within the
                                       transient callback or ticker event
                                       routine. */
-static intptr_t mode_vars[VarIndex_LAST];
+static intptr_t mode_vars[ARRAY_SIZE(variable_nos) - 1];
 
 static const char *key_names[] = {
   "Escape",
@@ -539,22 +552,6 @@ _Optional _kernel_oserror *ticker_handler(_kernel_swi_regs *r, void *pw)
 
 static _Optional const _kernel_oserror *read_mode_vars(void)
 {
-  /* Must keep the following array synchronised with the enumeration of mode
-     variable value indicies */
-  static const VDUVar variable_nos[VarIndex_LAST + 1] =
-  {
-    VDUVar_ModeFlags,
-    VDUVar_NColour,
-    VDUVar_XEigFactor,
-    VDUVar_YEigFactor,
-    VDUVar_LineLength,
-    VDUVar_ScreenSize,
-    VDUVar_Log2BPP,
-    VDUVar_XWindLimit,
-    VDUVar_YWindLimit,
-    VDUVar_EndOfList
-  };
-
   /* Read information about the current screen mode */
   _Optional const _kernel_oserror *e = os_read_vdu_variables(variable_nos, mode_vars);
   mode_vars_valid = (e == NULL);
