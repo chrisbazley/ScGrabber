@@ -26,6 +26,7 @@
    27.09.26 CJB Declare loop counters and conversion results at first use.
    29.09.26 CJB Finish moving loop counters to their first use.
    29.09.26 CJB Use strdup for string configuration values.
+   30.09.26 CJB Report errors found when closing saved configuration files.
 */
 
 /* ANSI headers */
@@ -152,9 +153,9 @@ _Optional const _kernel_oserror *save_config(const char *dest_file)
         break;
     }
 
-    for (unsigned int i = 0; i < ARRAY_SIZE(config_map) && e == NULL; i++)
+    int chars_out = 1; /* no. of characters transmitted by fprintf() */
+    for (unsigned int i = 0; i < ARRAY_SIZE(config_map) && chars_out > 0; i++)
     {
-      int chars_out; /* no. of characters transmitted by fprintf() */
       switch (config_map[i].type)
       {
         case Type_Boolean:
@@ -180,14 +181,13 @@ _Optional const _kernel_oserror *save_config(const char *dest_file)
 
           break;
       }
-      if (chars_out <= 0)
-      {
-        e = _kernel_last_oserror();
-        if (e == NULL)
-          e = msgs_error_subn(DUMMY_ERRNO, "WriteFail", 1, dest_file);
-      }
     }
-    fclose(&*f);
+    if (fclose(&*f) != 0 || chars_out <= 0)
+    {
+      e = _kernel_last_oserror();
+      if (e == NULL)
+        e = msgs_error_subn(DUMMY_ERRNO, "WriteFail", 1, dest_file);
+    }
   }
 
   return e;

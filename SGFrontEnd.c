@@ -43,6 +43,7 @@
    27.09.26 CJB Declare local variables near their first use.
    29.09.26 CJB Build configuration commands in a string buffer.
    29.09.26 CJB Require an error when reporting an initialisation failure.
+   30.09.26 CJB Report close failures when exporting configuration commands.
 */
 
 /* ISO C library headers */
@@ -323,9 +324,7 @@ static int save_to_file_event(int event_code, ToolboxEvent *event, IdBlock *id_b
       if (chars_out > 0)
         chars_out = fprintf(&*f, "%s\n", stringbuffer_get_pointer(&cmd_buffer));
 
-      fclose(&*f);
-
-      if (chars_out <= 0)
+      if (fclose(&*f) != 0 || chars_out <= 0)
       {
         /* Failed whilst writing to output file */
         e = _kernel_last_oserror();
