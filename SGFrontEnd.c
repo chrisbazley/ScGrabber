@@ -44,6 +44,7 @@
    29.09.26 CJB Build configuration commands in a string buffer.
    29.09.26 CJB Require an error when reporting an initialisation failure.
    30.09.26 CJB Report close failures when exporting configuration commands.
+   29.10.26 CJB Make unused null event-handler contexts explicit with casts.
 */
 
 /* ISO C library headers */
@@ -386,7 +387,7 @@ static int objectcreated_event(int event_code, ToolboxEvent *event, IdBlock *id_
     save_id = id_block->self_id;
 
     EF(event_register_toolbox_handler(save_id, SaveAs_SaveToFile,
-    save_to_file_event, 0));
+    save_to_file_event, (void *)NULL));
 
     return 1; /* claim event */
   }
@@ -481,9 +482,9 @@ static void initialise(void)
   EF(event_register_toolbox_handler(-1,
                                     Toolbox_ObjectAutoCreated,
                                     objectcreated_event,
-                                    0));
+                                    (void *)NULL));
 
-  EF(event_register_toolbox_handler(-1, -1, misc_event_handler, 0));
+  EF(event_register_toolbox_handler(-1, -1, misc_event_handler, (void *)NULL));
 
   /*
    * register handler for toolbox event ToolboxEvent_Quit,
@@ -492,8 +493,8 @@ static void initialise(void)
    * to quit properly when quit messages are
    * received from the wimp.
    */
-  EF(event_register_toolbox_handler(-1, ToolboxEvent_Quit, quit_event, 0));
-  EF(event_register_message_handler(Wimp_MQuit, quit_message, 0));
+  EF(event_register_toolbox_handler(-1, ToolboxEvent_Quit, quit_event, (void *)NULL));
+  EF(event_register_message_handler(Wimp_MQuit, quit_message, (void *)NULL));
 
   /* Load default or user-saved configuration */
   save_path = strdup("SGrab"); /* in case it's missing from the config file */
