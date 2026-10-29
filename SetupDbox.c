@@ -29,6 +29,7 @@
    27.09.26 CJB Use a designated initializer for the outgoing DataSave
                 message.
    29.09.26 CJB Build configuration commands in a string buffer.
+   29.10.26 CJB Make unused null event-handler contexts explicit with casts.
 */
 
 /* ANSI headers */
@@ -186,11 +187,11 @@ void setup_created(ObjectId id)
     EF(event_register_toolbox_handler(id,
                                       tbox_handlers[i].event_code,
                                       tbox_handlers[i].handler,
-                                      0));
+                                      (void *)NULL));
   }
 
   /* Register a DataSaveAck message handler */
-  EF(event_register_message_handler(Wimp_MDataSaveAck, datasaveack_message, 0));
+  EF(event_register_message_handler(Wimp_MDataSaveAck, datasaveack_message, (void *)NULL));
 
   /* Try to open a file containing names for internal key numbers */
   e = open_key_msgs();

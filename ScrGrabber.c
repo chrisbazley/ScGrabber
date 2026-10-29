@@ -23,12 +23,12 @@
    29.05.06 CJB Fixed bug in show_state_savepalette, which was actually
                 displaying the hot key enable state. Widespread changes to use
                 puts() or fputs() instead of printf() where appropriate.
-   26.09.26 CJB Use intptr_t for VDU variable values, including addresses.
-   26.09.26 CJB Allow host compilation and fix the filename assertion.
    07.06.06 CJB Made it configurable which 'hot' key is used. Now uses CBlibrary
                 function strdup() where appropriate.
                 Got rid of function lowercase(); cmd_handler() now uses
                 stricmp() instead of transforming the command argument string.
+   26.09.26 CJB Use intptr_t for VDU variable values, including addresses.
+   26.09.26 CJB Allow host compilation and fix the filename assertion.
    26.09.26 CJB Annotate nullable pointers with _Optional.
    27.09.26 CJB Express the pound-sign key name as an ASCII escape.
    27.09.26 CJB Correct screen-mode validation and initialise the OS_ReadArgs
@@ -46,6 +46,7 @@
    29.09.26 CJB Copy recorded OS errors by assignment.
    30.09.26 CJB Designate mode variable indices and derive the result array
                 size from the input list.
+   29.10.26 CJB Represent absent command arguments and callbacks as optional.
 */
 
 #include <stdio.h>
@@ -220,10 +221,13 @@ enum
 
 /* Type encapsulating one or more mutually-exclusive command line arguments and
    a handler function to be called when one is found by OS_ReadArgs. */
+typedef void ArgShowFn(void);
+typedef _Optional const _kernel_oserror *ArgHandlerFn(void *value, int index);
+
 typedef struct
 {
-  void (*show)( void );
-  _Optional const _kernel_oserror * (*handler)( void *value, int index );
+  _Optional ArgShowFn *show;
+  _Optional ArgHandlerFn *handler;
   int cmd_no;
   struct
   {
@@ -1655,7 +1659,7 @@ static _Optional const _kernel_oserror *switch_filename( void *value, int index 
 _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd_no, void *pw)
 {
   _Optional const _kernel_oserror *e = NULL;
-  void *read_args_buf[80] = {0};
+  _Optional char *read_args_buf[80] = {0};
 
   assert(arg_string != NULL || argc == 0);
   NOT_USED(pw);
@@ -1737,7 +1741,7 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
         if (read_args_buf[0] == NULL)
           e = take_numbered_shot();
         else
-          e = save_screen(read_args_buf[0]);
+          e = save_screen(&*read_args_buf[0]);
         break;
 
       case CMD_SGrabResetCount:
@@ -1788,7 +1792,7 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
               {
                 /* Second pass: handle the argument */
                 if ( sw->handler )
-                  e = sw->handler( read_args_buf[index], index );
+                  e = sw->handler( &*read_args_buf[index], index );
 
                 break; /* there should be no more arguments in this group */
               }
@@ -1822,19 +1826,19 @@ _Optional _kernel_oserror *cmd_handler(const char *arg_string, int argc, int cmd
             {
 
               if ( sw->states[j].string == NULL ||
-                   stricmp( read_args_buf[0], &*sw->states[j].string ) != 0 )
+                   stricmp( &*read_args_buf[0], &*sw->states[j].string ) != 0 )
                 continue;
 
               /* Translate state name into equivalent SGrabConfigure argument index */
               const int index = sw->states[j].index;
-              e = sw->handler( read_args_buf[0], index );
+              e = sw->handler( &*read_args_buf[0], index );
               found = true;
             }
 
             if ( !found )
             {
               /* Failed to match the command parameter, so tell the handler to parse it */
-              e = sw->handler( read_args_buf[0], Arg_END );
+              e = sw->handler( &*read_args_buf[0], Arg_END );
             }
           }
           break; /* Stop trying to identify the command */
