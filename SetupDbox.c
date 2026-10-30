@@ -461,11 +461,10 @@ static _Optional const _kernel_oserror *get_file_path(_Optional char **new_fname
 
   /* Find buffer size required to get the base file path */
   int new_fname_len;
-  char unused;
   e = writablefield_get_value(0,
                               setup_id,
                               ComponentId_FilePath,
-                              &unused,
+                              NULL,
                               0,
                               &new_fname_len);
   if (e == NULL)
