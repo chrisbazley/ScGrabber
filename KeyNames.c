@@ -23,6 +23,7 @@
    26.09.26 CJB Annotate nullable pointers with _Optional.
    27.09.26 CJB Use the correct format specifier for a buffer size.
    27.09.26 CJB Declare the lookup token where it is needed.
+   09.11.26 CJB Use the string-buffer MessageTrans lookup veneer.
 */
 
 /* ANSI headers */
@@ -39,6 +40,7 @@
 #include "Macros.h"
 #include "msgtrans.h"
 #include "MessTrans.h"
+#include "strb.h"
 #include "Debug.h"
 
 /* CBUtilLib headers */
@@ -194,12 +196,8 @@ _Optional const _kernel_oserror *lookup_key_name(unsigned int key_code,
     DEBUGF("Looking up token '%s'\n", token);
 
     /* Look up a key name in the messages file */
-    e = messagetrans_lookup(&key_msgs_desc,
-                            token,
-                            key_name_buf,
-                            sizeof(key_name_buf),
-                            NULL,
-                            0);
+    e = messagetrans_lookup_sb(&key_msgs_desc, token,
+      STRB_TMP_USE(key_name_buf), 0);
     if (e == NULL)
     {
       *key_name = key_name_buf;

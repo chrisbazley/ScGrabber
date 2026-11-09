@@ -45,6 +45,7 @@
    29.09.26 CJB Require an error when reporting an initialisation failure.
    30.09.26 CJB Report close failures when exporting configuration commands.
    29.10.26 CJB Make unused null event-handler contexts explicit with casts.
+   09.11.26 CJB Use the string-buffer MessageTrans lookup veneer.
 */
 
 /* ISO C library headers */
@@ -70,6 +71,7 @@
 #include "Err.h"
 #include "msgtrans.h"
 #include "MessTrans.h"
+#include "strb.h"
 #include "Hourglass.h"
 #include "Macros.h"
 #include "StrExtra.h"
@@ -444,12 +446,7 @@ static void initialise(void)
    * Look up the localised task name and use it to initialise the error
    * reporting module.
    */
-  e = messagetrans_lookup(&mfd,
-                          "_TaskName",
-                          task_name,
-                          sizeof(task_name),
-                          NULL,
-                          0);
+  e = messagetrans_lookup_sb(&mfd, "_TaskName", STRB_TMP_USE(task_name), 0);
   if (e != NULL)
     simple_exit(&*e);
 

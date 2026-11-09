@@ -125,7 +125,8 @@ both are compile-only targets because their RISC OS entry points and
 libraries cannot be linked there. On RISC OS the front end is an executable.
 
 The native `MakeBE` remains necessary to generate the CMHG veneer and link
-the relocatable module. `Makefile` remains the native front-end build.
+the relocatable module. `Makefile` remains the native front-end build, which
+also requires the `C:o.strb` library.
 
 ScreenGrabber is free software under the GNU General Public Licence,
 version 2 or later. See [LICENSE](LICENSE).
