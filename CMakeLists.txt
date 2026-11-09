@@ -11,11 +11,11 @@ include(FetchContent)
 
 FetchContent_Declare(CB
   GIT_REPOSITORY https://github.com/chrisbazley/CBLibrary.git
-  GIT_TAG main
+  GIT_TAG cfd8e7483980da27063a5345431bd5283a87346e
 )
 FetchContent_Declare(CBOS
   GIT_REPOSITORY https://github.com/chrisbazley/CBOSLib.git
-  GIT_TAG main
+  GIT_TAG a95beb622ff05d922355c33f5eae44fc097035de
 )
 FetchContent_Declare(CBDebug
   GIT_REPOSITORY https://github.com/chrisbazley/CBDebugLib.git
@@ -99,7 +99,7 @@ else()
   add_library(ScGrabberApp OBJECT ${FRONTEND_SOURCES})
 endif()
 
-target_link_libraries(ScGrabberApp PRIVATE CB CBOS CBDebug CBUtil OptionalAcornC)
+target_link_libraries(ScGrabberApp PRIVATE strb CB CBOS CBDebug CBUtil OptionalAcornC)
 target_compile_definitions(ScGrabberApp PRIVATE
   $<$<CONFIG:Debug>:DEBUG_OUTPUT>
 )
