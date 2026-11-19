@@ -11,11 +11,11 @@ include(FetchContent)
 
 FetchContent_Declare(CB
   GIT_REPOSITORY https://github.com/chrisbazley/CBLibrary.git
-  GIT_TAG cfd8e7483980da27063a5345431bd5283a87346e
+  GIT_TAG 35aec81e18a0cda776055de5fbab35948cf06bf7
 )
 FetchContent_Declare(CBOS
   GIT_REPOSITORY https://github.com/chrisbazley/CBOSLib.git
-  GIT_TAG a95beb622ff05d922355c33f5eae44fc097035de
+  GIT_TAG 174943e76b91198f2789cd1cb9bafe5dfe3b361a
 )
 FetchContent_Declare(CBDebug
   GIT_REPOSITORY https://github.com/chrisbazley/CBDebugLib.git
@@ -28,9 +28,11 @@ FetchContent_Declare(OptionalAcornC
 FetchContent_MakeAvailable(CB CBOS CBDebug OptionalAcornC)
 
 if(USE_OPTIONAL)
-  if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
-    message(FATAL_ERROR
-      "USE_OPTIONAL requires Christopher Bazley's Clang fork")
+  include(CheckCSourceCompiles)
+  check_c_source_compiles("_Optional int *p; int main(void) { return p != 0; }"
+      HAVE_C_OPTIONAL_QUALIFIER)
+  if(NOT HAVE_C_OPTIONAL_QUALIFIER)
+      message(FATAL_ERROR "USE_OPTIONAL requires compiler support for _Optional")
   endif()
   add_compile_definitions(USE_OPTIONAL)
 
