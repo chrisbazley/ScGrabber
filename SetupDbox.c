@@ -547,10 +547,9 @@ static bool setup_get_state(void)
   new_fname = NULL;
 
   /* Get the displayed key code */
-  ON_ERR_RTN_E(numberrange_get_value(0,
-                                     setup_id,
-                                     ComponentId_KeyNumber,
-                                     &state));
+  e = numberrange_get_value(0, setup_id, ComponentId_KeyNumber, &state);
+  if (e != NULL)
+    goto error;
   key_code = state;
 
   /* Get the state of the option buttons */
